@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Launcher icon background: gradient from deep purple to dark navy -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <gradient
+        android:startColor="#5B21B6"
+        android:centerColor="#3730A3"
+        android:endColor="#1E1B4B"
+        android:angle="135"
+        android:type="linear" />
+</shape>

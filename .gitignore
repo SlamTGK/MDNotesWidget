@@ -1,0 +1,44 @@
+# Compiled files
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.buildlog/
+.history
+.svn/
+migrate.lock
+.temp/
+
+# Android Studio project files
+*.iml
+.gradle/
+local.properties
+.idea/
+.idea/caches
+.idea/libraries
+.idea/modules.xml
+.idea/workspace.xml
+.idea/navEditor.xml
+.idea/assetWizardSettings.xml
+
+# Android compiled files
+/build
+/captures
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# Keystore files (IMPORTANT: never commit real keys!)
+*.jks
+*.keystore
+# Upload-key config (safe to keep if not containing actual keys)
+# key.properties
+
+# Google services
+google-services.json
+
+# Explicitly keep the Gradle wrapper JAR in version control
+!gradle/wrapper/gradle-wrapper.jar

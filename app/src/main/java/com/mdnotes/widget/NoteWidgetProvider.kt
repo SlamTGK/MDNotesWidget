@@ -1,0 +1,225 @@
+package com.mdnotes.widget
+
+import android.app.PendingIntent
+import android.appwidget.AppWidgetManager
+import android.appwidget.AppWidgetProvider
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.view.View
+import android.widget.RemoteViews
+import androidx.work.*
+import java.util.concurrent.TimeUnit
+
+/**
+ * Main AppWidgetProvider.
+ * Handles widget lifecycle, click events (open note / refresh),
+ * and schedules periodic updates via WorkManager.
+ */
+class NoteWidgetProvider : AppWidgetProvider() {
+
+    companion object {
+        const val ACTION_REFRESH   = "com.mdnotes.widget.ACTION_REFRESH"
+        const val ACTION_OPEN_NOTE = "com.mdnotes.widget.ACTION_OPEN_NOTE"
+        const val EXTRA_WIDGET_ID  = "extra_widget_id"
+        const val EXTRA_NOTE_URI   = "extra_note_uri"
+        const val WORK_NAME        = "md_notes_periodic_update"
+
+        // ── Widget update ─────────────────────────────────────────────────────
+
+        /**
+         * Core update function — picks a random note and builds RemoteViews.
+         * Safe to call from any thread.
+         */
+        fun updateWidget(
+            context: Context,
+            appWidgetManager: AppWidgetManager,
+            widgetId: Int
+        ) {
+            val folderUri = PreferencesManager.getFolderUri(context)
+
+            if (folderUri == null) {
+                appWidgetManager.updateAppWidget(widgetId, buildUnconfiguredViews(context, widgetId))
+                return
+            }
+
+            // Run file I/O on a background thread
+            Thread {
+                val fileUri = MarkdownFileScanner.getRandomFile(context, folderUri)
+
+                if (fileUri == null) {
+                    appWidgetManager.updateAppWidget(widgetId, buildEmptyViews(context, widgetId))
+                    return@Thread
+                }
+
+                PreferencesManager.setCurrentNoteUri(context, widgetId, fileUri.toString())
+
+                val note = MarkdownFileScanner.readNoteContent(context, fileUri)
+
+                if (note == null) {
+                    appWidgetManager.updateAppWidget(widgetId, buildEmptyViews(context, widgetId))
+                    return@Thread
+                }
+
+                appWidgetManager.updateAppWidget(widgetId, buildNoteViews(context, widgetId, note))
+            }.start()
+        }
+
+        // ── RemoteViews builders ──────────────────────────────────────────────
+
+        private fun buildNoteViews(
+            context: Context,
+            widgetId: Int,
+            note: MarkdownFileScanner.NoteContent
+        ): RemoteViews {
+            val views = RemoteViews(context.packageName, R.layout.widget_note)
+
+            views.setTextViewText(R.id.widget_title, note.title)
+            views.setTextViewText(R.id.widget_content, note.content)
+            views.setTextViewText(R.id.widget_filename, note.fileName)
+
+            // Entire widget → open note
+            views.setOnClickPendingIntent(
+                R.id.widget_root,
+                buildOpenPendingIntent(context, widgetId, note.uri)
+            )
+            // Refresh button → pick next random note
+            views.setOnClickPendingIntent(
+                R.id.widget_refresh_btn,
+                buildRefreshPendingIntent(context, widgetId)
+            )
+
+            return views
+        }
+
+        private fun buildUnconfiguredViews(context: Context, widgetId: Int): RemoteViews {
+            val views = RemoteViews(context.packageName, R.layout.widget_unconfigured)
+            val configIntent = Intent(context, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            }
+            val pi = PendingIntent.getActivity(
+                context, widgetId, configIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            views.setOnClickPendingIntent(R.id.widget_unconfigured_root, pi)
+            return views
+        }
+
+        private fun buildEmptyViews(context: Context, widgetId: Int): RemoteViews {
+            val views = RemoteViews(context.packageName, R.layout.widget_empty)
+            views.setOnClickPendingIntent(
+                R.id.widget_empty_refresh,
+                buildRefreshPendingIntent(context, widgetId)
+            )
+            // Also tap background → open settings
+            val configIntent = Intent(context, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            }
+            val pi = PendingIntent.getActivity(
+                context, widgetId + 20000, configIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            views.setOnClickPendingIntent(R.id.widget_empty_root, pi)
+            return views
+        }
+
+        // ── PendingIntent helpers ─────────────────────────────────────────────
+
+        private fun buildRefreshPendingIntent(context: Context, widgetId: Int): PendingIntent {
+            val intent = Intent(context, NoteWidgetProvider::class.java).apply {
+                action = ACTION_REFRESH
+                putExtra(EXTRA_WIDGET_ID, widgetId)
+            }
+            return PendingIntent.getBroadcast(
+                context, widgetId,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+        }
+
+        private fun buildOpenPendingIntent(
+            context: Context,
+            widgetId: Int,
+            fileUri: Uri
+        ): PendingIntent {
+            val intent = Intent(context, NoteWidgetProvider::class.java).apply {
+                action = ACTION_OPEN_NOTE
+                putExtra(EXTRA_WIDGET_ID, widgetId)
+                putExtra(EXTRA_NOTE_URI, fileUri.toString())
+            }
+            return PendingIntent.getBroadcast(
+                context, widgetId + 10000,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+        }
+
+        // ── WorkManager ───────────────────────────────────────────────────────
+
+        fun scheduleWork(context: Context) {
+            val hours = PreferencesManager.getIntervalHours(context).toLong()
+            val request = PeriodicWorkRequestBuilder<WidgetUpdateWorker>(hours, TimeUnit.HOURS)
+                .setConstraints(Constraints.NONE)
+                .build()
+
+            WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+                WORK_NAME,
+                ExistingPeriodicWorkPolicy.UPDATE,
+                request
+            )
+        }
+
+        fun cancelWork(context: Context) {
+            WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME)
+        }
+    }
+
+    // ── AppWidgetProvider callbacks ───────────────────────────────────────────
+
+    override fun onUpdate(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetIds: IntArray
+    ) {
+        for (widgetId in appWidgetIds) {
+            updateWidget(context, appWidgetManager, widgetId)
+        }
+    }
+
+    override fun onEnabled(context: Context) {
+        super.onEnabled(context)
+        scheduleWork(context)
+    }
+
+    override fun onDisabled(context: Context) {
+        super.onDisabled(context)
+        cancelWork(context)
+    }
+
+    override fun onDeleted(context: Context, appWidgetIds: IntArray) {
+        super.onDeleted(context, appWidgetIds)
+        for (id in appWidgetIds) {
+            PreferencesManager.clearWidgetNote(context, id)
+        }
+    }
+
+    override fun onReceive(context: Context, intent: Intent) {
+        super.onReceive(context, intent)
+
+        when (intent.action) {
+            ACTION_REFRESH -> {
+                val id = intent.getIntExtra(EXTRA_WIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
+                if (id != AppWidgetManager.INVALID_APPWIDGET_ID) {
+                    updateWidget(context, AppWidgetManager.getInstance(context), id)
+                }
+            }
+            ACTION_OPEN_NOTE -> {
+                val uriStr = intent.getStringExtra(EXTRA_NOTE_URI)
+                if (uriStr != null) {
+                    FileOpener.openFile(context, Uri.parse(uriStr))
+                }
+            }
+        }
+    }
+}

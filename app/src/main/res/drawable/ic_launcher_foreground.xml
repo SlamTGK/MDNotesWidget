@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Launcher icon foreground: stylized note/document with fold corner -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Document body (white card) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M26,18 Q26,13 31,13 L73,13 L89,29 L89,90 Q89,95 84,95 L31,95 Q26,95 26,90 Z" />
+
+    <!-- Folded corner (light purple tint) -->
+    <path
+        android:fillColor="#DDD6FE"
+        android:pathData="M73,13 L89,29 L73,29 Z" />
+
+    <!-- Accent text lines (purple) -->
+    <!-- Line 1 - full width -->
+    <path
+        android:fillColor="#7C3AED"
+        android:pathData="M36,42 L72,42 L72,47 L36,47 Z" />
+    <!-- Line 2 - full width -->
+    <path
+        android:fillColor="#7C3AED"
+        android:pathData="M36,53 L72,53 L72,58 L36,58 Z" />
+    <!-- Line 3 - short (paragraph end effect) -->
+    <path
+        android:fillColor="#A78BFA"
+        android:pathData="M36,64 L58,64 L58,69 L36,69 Z" />
+    <!-- Small hash mark for "markdown" hint -->
+    <path
+        android:fillColor="#06B6D4"
+        android:pathData="M36,76 L40,76 L40,86 L36,86 Z" />
+    <path
+        android:fillColor="#06B6D4"
+        android:pathData="M44,76 L48,76 L48,86 L44,86 Z" />
+    <path
+        android:fillColor="#06B6D4"
+        android:pathData="M34,79 L50,79 L50,82 L34,82 Z" />
+</vector>

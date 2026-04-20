@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Widget background: dark indigo gradient with rounded corners and subtle border -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Border layer -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:startColor="#2D2A6E"
+                android:endColor="#1A1640"
+                android:angle="135"
+                android:type="linear" />
+            <corners android:radius="20dp" />
+        </shape>
+    </item>
+    <!-- Inner background (inset 1dp to create border effect) -->
+    <item
+        android:left="1dp"
+        android:top="1dp"
+        android:right="1dp"
+        android:bottom="1dp">
+        <shape android:shape="rectangle">
+            <gradient
+                android:startColor="#1E1B4B"
+                android:centerColor="#151233"
+                android:endColor="#0F172A"
+                android:angle="135"
+                android:type="linear" />
+            <corners android:radius="19dp" />
+        </shape>
+    </item>
+</layer-list>

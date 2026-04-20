@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    AppWidget metadata for Android 12+ (API 31+).
+    Since minSdk=36 we can use all modern widget attributes.
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+
+    android:minWidth="180dp"
+    android:minHeight="110dp"
+
+    android:targetCellWidth="3"
+    android:targetCellHeight="2"
+
+    android:maxResizeWidth="500dp"
+    android:maxResizeHeight="500dp"
+
+    android:minResizeWidth="130dp"
+    android:minResizeHeight="90dp"
+
+    android:updatePeriodMillis="0"
+
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen"
+
+    android:configure="com.mdnotes.widget.MainActivity"
+    android:description="@string/widget_description"
+
+    android:previewLayout="@layout/widget_note"
+    android:initialLayout="@layout/widget_unconfigured"
+
+    android:widgetFeatures="reconfigurable|configuration_optional" />

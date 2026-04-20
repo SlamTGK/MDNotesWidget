@@ -1,0 +1,318 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Settings / configuration screen.
+    Dark Material3 design with card-based sections.
+-->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg_dark"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="32dp">
+
+        <!-- ── Header ─────────────────────────────────────────────────── -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:paddingTop="32dp"
+            android:paddingBottom="24dp">
+
+            <!-- App icon -->
+            <ImageView
+                android:layout_width="72dp"
+                android:layout_height="72dp"
+                android:src="@mipmap/ic_launcher"
+                android:contentDescription="@string/app_name" />
+
+            <!-- App title -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:text="@string/app_name"
+                android:textColor="@color/text_primary"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                android:fontFamily="sans-serif-medium" />
+
+            <!-- Subtitle -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/settings_subtitle"
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp" />
+
+        </LinearLayout>
+
+        <!-- ── Card: Folder ───────────────────────────────────────────── -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            app:cardBackgroundColor="@color/surface_dark"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/surface_card_border"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="18dp">
+
+                <!-- Section label -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/folder_settings"
+                    android:textColor="@color/primary_light"
+                    android:textSize="11sp"
+                    android:textAllCaps="true"
+                    android:letterSpacing="0.08"
+                    android:textStyle="bold" />
+
+                <!-- Current folder path -->
+                <TextView
+                    android:id="@+id/tv_folder_path"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="@string/folder_path_hint"
+                    android:textColor="@color/text_primary"
+                    android:textSize="13sp"
+                    android:maxLines="2"
+                    android:ellipsize="middle"
+                    android:fontFamily="monospace" />
+
+                <!-- File count badge -->
+                <TextView
+                    android:id="@+id/tv_file_count"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:textColor="@color/secondary"
+                    android:textSize="11sp" />
+
+                <!-- Select folder button -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_select_folder"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:text="@string/select_folder"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    app:strokeColor="@color/primary"
+                    android:textColor="@color/primary_light" />
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- ── Card: Interval ─────────────────────────────────────────── -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            app:cardBackgroundColor="@color/surface_dark"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/surface_card_border"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="18dp">
+
+                <!-- Section label + current value -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/interval_settings"
+                        android:textColor="@color/primary_light"
+                        android:textSize="11sp"
+                        android:textAllCaps="true"
+                        android:letterSpacing="0.08"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tv_interval_value"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="@color/text_primary"
+                        android:textSize="20sp"
+                        android:textStyle="bold" />
+
+                </LinearLayout>
+
+                <!-- Slider (1—24 hours) -->
+                <SeekBar
+                    android:id="@+id/seekbar_interval"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:max="23"
+                    android:progress="0"
+                    android:progressTint="@color/primary"
+                    android:thumbTint="@color/primary_light" />
+
+                <!-- Min / max labels -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="1 ч"
+                        android:textColor="@color/text_hint"
+                        android:textSize="11sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="24 ч"
+                        android:textColor="@color/text_hint"
+                        android:textSize="11sp" />
+
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- ── Card: Open with ────────────────────────────────────────── -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            app:cardBackgroundColor="@color/surface_dark"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/surface_card_border"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="18dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/open_with_settings"
+                    android:textColor="@color/primary_light"
+                    android:textSize="11sp"
+                    android:textAllCaps="true"
+                    android:letterSpacing="0.08"
+                    android:textStyle="bold" />
+
+                <RadioGroup
+                    android:id="@+id/radio_group_open_with"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp">
+
+                    <RadioButton
+                        android:id="@+id/radio_obsidian"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:gravity="center_vertical"
+                        android:text="@string/obsidian"
+                        android:textColor="@color/text_primary"
+                        android:textSize="14sp"
+                        android:buttonTint="@color/primary" />
+
+                    <RadioButton
+                        android:id="@+id/radio_system"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:gravity="center_vertical"
+                        android:text="@string/system_chooser"
+                        android:textColor="@color/text_primary"
+                        android:textSize="14sp"
+                        android:buttonTint="@color/primary"
+                        android:checked="true" />
+
+                </RadioGroup>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- ── Card: Actions ─────────────────────────────────────────── -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            app:cardBackgroundColor="@color/surface_dark"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/surface_card_border"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="18dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/actions_section"
+                    android:textColor="@color/primary_light"
+                    android:textSize="11sp"
+                    android:textAllCaps="true"
+                    android:letterSpacing="0.08"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="14dp" />
+
+                <!-- Primary action: refresh widgets -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_refresh_widgets"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:text="@string/refresh_all_widgets"
+                    android:textSize="14sp"
+                    android:layout_marginBottom="10dp"
+                    app:cornerRadius="12dp"
+                    app:backgroundTint="@color/primary" />
+
+                <!-- Secondary action: rescan files -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_refresh_files"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:text="@string/refresh_file_list"
+                    android:textSize="14sp"
+                    android:textColor="@color/primary_light"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    app:strokeColor="@color/primary"
+                    app:cornerRadius="12dp" />
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+    </LinearLayout>
+</ScrollView>

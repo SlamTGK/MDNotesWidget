@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Main widget layout — displayed when a note is available.
+    Uses RemoteViews-compatible views only.
+
+    Structure:
+      ┌─────────────────────────────┐ ← widget_background (dark indigo)
+      │ ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓ │ ← accent_line (purple→cyan, 3dp)
+      │ Title of the note            │
+      │ ─────────────────────────── │
+      │ Content preview text goes    │
+      │ here, multiple lines…        │
+      │                             │
+      │ filename.md          [↺]    │ ← refresh button
+      └─────────────────────────────┘
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/widget_background">
+
+    <!-- Top accent bar: purple → cyan gradient -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="3dp"
+        android:background="@drawable/accent_line" />
+
+    <!-- Title area -->
+    <TextView
+        android:id="@+id/widget_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="14dp"
+        android:layout_marginEnd="14dp"
+        android:layout_marginTop="10dp"
+        android:textColor="@color/widget_text_title"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:maxLines="2"
+        android:ellipsize="end"
+        android:lineSpacingExtra="1dp" />
+
+    <!-- Subtle divider -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginStart="14dp"
+        android:layout_marginEnd="14dp"
+        android:layout_marginTop="8dp"
+        android:background="@color/widget_divider" />
+
+    <!-- Note content — takes all remaining vertical space -->
+    <TextView
+        android:id="@+id/widget_content"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginStart="14dp"
+        android:layout_marginEnd="14dp"
+        android:layout_marginTop="8dp"
+        android:textColor="@color/widget_text_content"
+        android:textSize="12sp"
+        android:lineSpacingExtra="2dp"
+        android:maxLines="12"
+        android:ellipsize="end" />
+
+    <!-- Bottom bar: filename + refresh button -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="36dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="14dp"
+        android:paddingEnd="6dp"
+        android:paddingBottom="6dp">
+
+        <TextView
+            android:id="@+id/widget_filename"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textColor="@color/widget_text_filename"
+            android:textSize="9sp"
+            android:maxLines="1"
+            android:ellipsize="middle" />
+
+        <!-- Refresh button — distinct click target -->
+        <ImageView
+            android:id="@+id/widget_refresh_btn"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:src="@drawable/ic_refresh"
+            android:padding="5dp"
+            android:alpha="0.55"
+            android:contentDescription="@string/refresh" />
+
+    </LinearLayout>
+
+</LinearLayout>

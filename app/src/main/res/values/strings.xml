@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">MD Notes Widget</string>
+    <string name="widget_description">Отображает случайные Markdown-заметки из выбранной папки</string>
+
+    <!-- Widget states -->
+    <string name="tap_to_configure">Нажмите для настройки</string>
+    <string name="configure_hint">Выберите папку с .md файлами</string>
+    <string name="no_notes_found">Заметки не найдены</string>
+    <string name="no_notes_hint">Нет .md файлов в выбранной папке</string>
+    <string name="no_folder_selected">Папка не выбрана</string>
+
+    <!-- Settings screen -->
+    <string name="settings">Настройки</string>
+    <string name="settings_subtitle">Настройте виджет под себя</string>
+    <string name="folder_settings">Папка с заметками</string>
+    <string name="interval_settings">Интервал обновления</string>
+    <string name="open_with_settings">Открывать в</string>
+    <string name="actions_section">Управление</string>
+
+    <!-- Folder -->
+    <string name="select_folder">Выбрать папку</string>
+    <string name="folder_path_hint">Папка не выбрана</string>
+    <string name="file_count">%d файлов найдено</string>
+
+    <!-- Open with -->
+    <string name="open_with">Открыть заметку</string>
+    <string name="obsidian">Obsidian</string>
+    <string name="system_chooser">Выбор приложения</string>
+    <string name="obsidian_not_installed">Obsidian не найден, выбор приложения…</string>
+
+    <!-- Actions -->
+    <string name="refresh_all_widgets">Обновить все виджеты</string>
+    <string name="refresh_file_list">Обновить список файлов</string>
+    <string name="widget_updated">Виджеты обновлены</string>
+    <string name="files_refreshed">Найдено файлов: %d</string>
+    <string name="error_opening_file">Не удалось открыть файл</string>
+    <string name="refresh">Обновить</string>
+</resources>
