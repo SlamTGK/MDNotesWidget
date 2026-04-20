@@ -1,18 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Main widget layout — displayed when a note is available.
-    Uses RemoteViews-compatible views only.
-
-    Structure:
-      ┌─────────────────────────────┐ ← widget_background (dark indigo)
-      │ ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓ │ ← accent_line (purple→cyan, 3dp)
-      │ Title of the note            │
-      │ ─────────────────────────── │
-      │ Content preview text goes    │
-      │ here, multiple lines…        │
-      │                             │
-      │ filename.md          [↺]    │ ← refresh button
-      └─────────────────────────────┘
+    Main widget layout. Uses ONLY RemoteViews-compatible views and attributes.
+    NO layout_weight — not supported in RemoteViews on Android 12+.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_root"
@@ -21,13 +10,13 @@
     android:orientation="vertical"
     android:background="@drawable/widget_background">
 
-    <!-- Top accent bar: purple → cyan gradient -->
+    <!-- Top accent bar: purple → cyan gradient, 3dp tall -->
     <View
         android:layout_width="match_parent"
         android:layout_height="3dp"
         android:background="@drawable/accent_line" />
 
-    <!-- Title area -->
+    <!-- Note title -->
     <TextView
         android:id="@+id/widget_title"
         android:layout_width="match_parent"
@@ -39,19 +28,18 @@
         android:textSize="14sp"
         android:textStyle="bold"
         android:maxLines="2"
-        android:ellipsize="end"
-        android:lineSpacingExtra="1dp" />
+        android:ellipsize="end" />
 
-    <!-- Subtle divider -->
+    <!-- Divider -->
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:layout_marginStart="14dp"
         android:layout_marginEnd="14dp"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="7dp"
         android:background="@color/widget_divider" />
 
-    <!-- Note content — takes all remaining vertical space -->
+    <!-- Note content preview — fixed height to work without layout_weight -->
     <TextView
         android:id="@+id/widget_content"
         android:layout_width="match_parent"
@@ -59,22 +47,23 @@
         android:layout_weight="1"
         android:layout_marginStart="14dp"
         android:layout_marginEnd="14dp"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="7dp"
         android:textColor="@color/widget_text_content"
         android:textSize="12sp"
         android:lineSpacingExtra="2dp"
-        android:maxLines="12"
-        android:ellipsize="end" />
+        android:ellipsize="end"
+        android:maxLines="20" />
 
     <!-- Bottom bar: filename + refresh button -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="36dp"
+        android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:paddingStart="14dp"
         android:paddingEnd="6dp"
-        android:paddingBottom="6dp">
+        android:paddingBottom="8dp"
+        android:paddingTop="4dp">
 
         <TextView
             android:id="@+id/widget_filename"
@@ -86,14 +75,13 @@
             android:maxLines="1"
             android:ellipsize="middle" />
 
-        <!-- Refresh button — distinct click target -->
         <ImageView
             android:id="@+id/widget_refresh_btn"
             android:layout_width="30dp"
             android:layout_height="30dp"
             android:src="@drawable/ic_refresh"
             android:padding="5dp"
-            android:alpha="0.55"
+            android:alpha="0.6"
             android:contentDescription="@string/refresh" />
 
     </LinearLayout>

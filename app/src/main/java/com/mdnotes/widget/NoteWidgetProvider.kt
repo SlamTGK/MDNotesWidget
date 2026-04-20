@@ -7,16 +7,10 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.view.View
 import android.widget.RemoteViews
 import androidx.work.*
 import java.util.concurrent.TimeUnit
 
-/**
- * Main AppWidgetProvider.
- * Handles widget lifecycle, click events (open note / refresh),
- * and schedules periodic updates via WorkManager.
- */
 class NoteWidgetProvider : AppWidgetProvider() {
 
     companion object {
@@ -26,12 +20,6 @@ class NoteWidgetProvider : AppWidgetProvider() {
         const val EXTRA_NOTE_URI   = "extra_note_uri"
         const val WORK_NAME        = "md_notes_periodic_update"
 
-        // ── Widget update ─────────────────────────────────────────────────────
-
-        /**
-         * Core update function — picks a random note and builds RemoteViews.
-         * Safe to call from any thread.
-         */
         fun updateWidget(
             context: Context,
             appWidgetManager: AppWidgetManager,
@@ -40,29 +28,38 @@ class NoteWidgetProvider : AppWidgetProvider() {
             val folderUri = PreferencesManager.getFolderUri(context)
 
             if (folderUri == null) {
-                appWidgetManager.updateAppWidget(widgetId, buildUnconfiguredViews(context, widgetId))
+                try {
+                    appWidgetManager.updateAppWidget(widgetId, buildUnconfiguredViews(context, widgetId))
+                } catch (_: Exception) {}
                 return
             }
 
-            // Run file I/O on a background thread
+            // File I/O on background thread — appWidgetManager is safe to call from any thread
             Thread {
-                val fileUri = MarkdownFileScanner.getRandomFile(context, folderUri)
+                try {
+                    val fileUri = MarkdownFileScanner.getRandomFile(context, folderUri)
 
-                if (fileUri == null) {
-                    appWidgetManager.updateAppWidget(widgetId, buildEmptyViews(context, widgetId))
-                    return@Thread
+                    if (fileUri == null) {
+                        appWidgetManager.updateAppWidget(widgetId, buildEmptyViews(context, widgetId))
+                        return@Thread
+                    }
+
+                    PreferencesManager.setCurrentNoteUri(context, widgetId, fileUri.toString())
+
+                    val note = MarkdownFileScanner.readNoteContent(context, fileUri)
+
+                    if (note == null) {
+                        appWidgetManager.updateAppWidget(widgetId, buildEmptyViews(context, widgetId))
+                        return@Thread
+                    }
+
+                    appWidgetManager.updateAppWidget(widgetId, buildNoteViews(context, widgetId, note))
+                } catch (e: Exception) {
+                    // If building views fails for any reason, fall back to empty state
+                    try {
+                        appWidgetManager.updateAppWidget(widgetId, buildEmptyViews(context, widgetId))
+                    } catch (_: Exception) {}
                 }
-
-                PreferencesManager.setCurrentNoteUri(context, widgetId, fileUri.toString())
-
-                val note = MarkdownFileScanner.readNoteContent(context, fileUri)
-
-                if (note == null) {
-                    appWidgetManager.updateAppWidget(widgetId, buildEmptyViews(context, widgetId))
-                    return@Thread
-                }
-
-                appWidgetManager.updateAppWidget(widgetId, buildNoteViews(context, widgetId, note))
             }.start()
         }
 
@@ -79,12 +76,10 @@ class NoteWidgetProvider : AppWidgetProvider() {
             views.setTextViewText(R.id.widget_content, note.content)
             views.setTextViewText(R.id.widget_filename, note.fileName)
 
-            // Entire widget → open note
             views.setOnClickPendingIntent(
                 R.id.widget_root,
                 buildOpenPendingIntent(context, widgetId, note.uri)
             )
-            // Refresh button → pick next random note
             views.setOnClickPendingIntent(
                 R.id.widget_refresh_btn,
                 buildRefreshPendingIntent(context, widgetId)
@@ -95,11 +90,11 @@ class NoteWidgetProvider : AppWidgetProvider() {
 
         private fun buildUnconfiguredViews(context: Context, widgetId: Int): RemoteViews {
             val views = RemoteViews(context.packageName, R.layout.widget_unconfigured)
-            val configIntent = Intent(context, MainActivity::class.java).apply {
+            val intent = Intent(context, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             }
             val pi = PendingIntent.getActivity(
-                context, widgetId, configIntent,
+                context, widgetId, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
             views.setOnClickPendingIntent(R.id.widget_unconfigured_root, pi)
@@ -112,12 +107,11 @@ class NoteWidgetProvider : AppWidgetProvider() {
                 R.id.widget_empty_refresh,
                 buildRefreshPendingIntent(context, widgetId)
             )
-            // Also tap background → open settings
-            val configIntent = Intent(context, MainActivity::class.java).apply {
+            val intent = Intent(context, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             }
             val pi = PendingIntent.getActivity(
-                context, widgetId + 20000, configIntent,
+                context, widgetId + 20000, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
             views.setOnClickPendingIntent(R.id.widget_empty_root, pi)
@@ -159,8 +153,9 @@ class NoteWidgetProvider : AppWidgetProvider() {
 
         fun scheduleWork(context: Context) {
             val hours = PreferencesManager.getIntervalHours(context).toLong()
+            val constraints = Constraints.Builder().build()
             val request = PeriodicWorkRequestBuilder<WidgetUpdateWorker>(hours, TimeUnit.HOURS)
-                .setConstraints(Constraints.NONE)
+                .setConstraints(constraints)
                 .build()
 
             WorkManager.getInstance(context).enqueueUniquePeriodicWork(
