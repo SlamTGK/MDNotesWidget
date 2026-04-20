@@ -42,3 +42,4 @@ google-services.json
 
 # Explicitly keep the Gradle wrapper JAR in version control
 !gradle/wrapper/gradle-wrapper.jar
+
