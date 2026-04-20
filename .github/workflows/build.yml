@@ -51,6 +51,20 @@ jobs:
           key: gradle-${{ hashFiles('**/*.gradle.kts', '**/gradle-wrapper.properties', '**/gradle.properties') }}
           restore-keys: gradle-
 
+      # ── Generate debug keystore (consistent signing across CI runs) ────────────
+      - name: Create debug keystore
+        run: |
+          mkdir -p $HOME/.android
+          keytool -genkeypair \
+            -keystore $HOME/.android/debug.keystore \
+            -storepass android \
+            -alias androiddebugkey \
+            -keypass android \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US"
+
       # ── Build ───────────────────────────────────────────────────────────────
       - name: Build Debug APK
         run: gradle assembleDebug --stacktrace --no-configuration-cache

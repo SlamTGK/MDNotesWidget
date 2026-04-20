@@ -15,14 +15,27 @@ android {
         versionName = "1.0"
     }
 
+    signingConfigs {
+        // Reuse the built-in debug keystore for sideloading.
+        // For Play Store, generate a real keystore and use GitHub Secrets.
+        getByName("debug") {
+            storeFile = file("${System.getProperty("user.home")}/.android/debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
         release {
-            isMinifyEnabled = true
+            isMinifyEnabled = false   // disabled — R8 can break widgets without careful keep rules
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            // Uses debug signing for easy sideloading; replace with real keystore for production
+            signingConfig = signingConfigs.getByName("debug")
+        }
+        debug {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
