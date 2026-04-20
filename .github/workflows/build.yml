@@ -48,15 +48,15 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: gradle-${{ hashFiles('**/*.gradle.kts', '**/gradle-wrapper.properties') }}
+          key: gradle-${{ hashFiles('**/*.gradle.kts', '**/gradle-wrapper.properties', '**/gradle.properties') }}
           restore-keys: gradle-
 
       # ── Build ───────────────────────────────────────────────────────────────
       - name: Build Debug APK
-        run: gradle assembleDebug --stacktrace
+        run: gradle assembleDebug --stacktrace --no-configuration-cache
 
       - name: Build Release APK (signed with debug key)
-        run: gradle assembleRelease --stacktrace
+        run: gradle assembleRelease --stacktrace --no-configuration-cache
 
       # ── Upload artifacts ────────────────────────────────────────────────────
       - name: Upload Debug APK

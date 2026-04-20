@@ -42,3 +42,6 @@ google-services.json
 
 # Explicitly keep the Gradle wrapper JAR in version control
 !gradle/wrapper/gradle-wrapper.jar
+
+# Explicitly keep gradle.properties (contains android.useAndroidX=true etc.)
+!gradle.properties
