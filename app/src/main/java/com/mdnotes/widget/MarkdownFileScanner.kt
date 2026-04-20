@@ -18,8 +18,9 @@ object MarkdownFileScanner {
      */
     fun scanFolder(context: Context, folderUri: Uri): List<Uri> {
         val root = DocumentFile.fromTreeUri(context, folderUri) ?: return emptyList()
+        val blacklist = PreferencesManager.getFolderBlacklist(context).map { it.lowercase() }
         val result = mutableListOf<Uri>()
-        scanRecursive(root, result)
+        scanRecursive(root, result, blacklist)
         return result
     }
 
@@ -34,6 +35,30 @@ object MarkdownFileScanner {
             if (cached.isEmpty()) return null
             PreferencesManager.setCachedFileUris(context, cached)
         }
+
+        val tagFilter = PreferencesManager.getTagFilter(context)
+        
+        // If no filter, just return random
+        if (tagFilter.isBlank()) {
+            return Uri.parse(cached.random())
+        }
+
+        // If tag filter is set, try up to 30 random files to find the tag
+        for (i in 0 until 30) {
+            val randomUri = Uri.parse(cached.random())
+            try {
+                val rawContent = context.contentResolver.openInputStream(randomUri)?.use { stream ->
+                    stream.bufferedReader(Charsets.UTF_8).readText()
+                }
+                if (rawContent != null && rawContent.contains(tagFilter, ignoreCase = true)) {
+                    return randomUri
+                }
+            } catch (e: Exception) {
+                // Ignore read errors
+            }
+        }
+
+        // If not found after 30 tries, return any random file safely to prevent showing empty widgets
         return Uri.parse(cached.random())
     }
 
@@ -73,10 +98,14 @@ object MarkdownFileScanner {
 
     // ── Private helpers ───────────────────────────────────────────────────────
 
-    private fun scanRecursive(dir: DocumentFile, result: MutableList<Uri>) {
+    private fun scanRecursive(dir: DocumentFile, result: MutableList<Uri>, blacklist: List<String>) {
+        // Stop scanning if current folder name is exactly in the blacklist
+        val dirName = dir.name?.lowercase() ?: ""
+        if (blacklist.any { it == dirName }) return
+        
         for (file in dir.listFiles()) {
             when {
-                file.isDirectory -> scanRecursive(file, result)
+                file.isDirectory -> scanRecursive(file, result, blacklist)
                 file.isFile && file.name?.endsWith(".md", ignoreCase = true) == true ->
                     result.add(file.uri)
             }

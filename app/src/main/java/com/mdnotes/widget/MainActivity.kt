@@ -67,6 +67,8 @@ class MainActivity : AppCompatActivity() {
         setupIntervalSection()
         setupOpenWithSection()
         setupThemeSection()
+        setupFontSection()
+        setupAdvancedFilteringSection()
         setupActionButtons()
     }
 
@@ -155,9 +157,55 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun setupFontSection() {
+        val fontSize = PreferencesManager.getFontSize(this)
+        when (fontSize) {
+            PreferencesManager.FONT_SIZE_SMALL -> findViewById<RadioButton>(R.id.radio_font_small).isChecked = true
+            PreferencesManager.FONT_SIZE_LARGE -> findViewById<RadioButton>(R.id.radio_font_large).isChecked = true
+            else -> findViewById<RadioButton>(R.id.radio_font_medium).isChecked = true
+        }
+
+        val group = findViewById<RadioGroup>(R.id.radio_group_font)
+        group.setOnCheckedChangeListener { _, checkedId ->
+            val value = when (checkedId) {
+                R.id.radio_font_small -> PreferencesManager.FONT_SIZE_SMALL
+                R.id.radio_font_large -> PreferencesManager.FONT_SIZE_LARGE
+                else -> PreferencesManager.FONT_SIZE_MEDIUM
+            }
+            PreferencesManager.setFontSize(this, value)
+            triggerWidgetUpdate()
+        }
+    }
+
+    private fun setupAdvancedFilteringSection() {
+        val editTag = findViewById<EditText>(R.id.edit_tag_filter)
+        val editBlacklist = findViewById<EditText>(R.id.edit_folder_blacklist)
+
+        editTag.setText(PreferencesManager.getTagFilter(this))
+        editBlacklist.setText(PreferencesManager.getFolderBlacklistRaw(this))
+
+        // Save immediately on focus lost or regular intervals isn't strictly necessary 
+        // if we save dynamically, but adding a TextWatcher can freeze typing. 
+        // We will just save when the refresh button is clicked or activity pauses.
+    }
+
+    override fun onPause() {
+        super.onPause()
+        saveAdvancedSettings()
+    }
+
+    private fun saveAdvancedSettings() {
+        val editTag = findViewById<EditText>(R.id.edit_tag_filter)
+        val editBlacklist = findViewById<EditText>(R.id.edit_folder_blacklist)
+
+        PreferencesManager.setTagFilter(this, editTag.text.toString())
+        PreferencesManager.setFolderBlacklistRaw(this, editBlacklist.text.toString())
+    }
+
     private fun setupActionButtons() {
         // Refresh all widget displays
         findViewById<Button>(R.id.btn_refresh_widgets).setOnClickListener {
+            saveAdvancedSettings()
             triggerWidgetUpdate()
             Toast.makeText(this, getString(R.string.widget_updated), Toast.LENGTH_SHORT).show()
 
@@ -169,6 +217,7 @@ class MainActivity : AppCompatActivity() {
 
         // Rescan folder for new/deleted .md files
         findViewById<Button>(R.id.btn_refresh_files).setOnClickListener {
+            saveAdvancedSettings()
             val folderUri = PreferencesManager.getFolderUri(this)
             if (folderUri == null) {
                 Toast.makeText(this, getString(R.string.no_folder_selected), Toast.LENGTH_SHORT).show()

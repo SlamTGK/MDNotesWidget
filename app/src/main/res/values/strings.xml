@@ -20,6 +20,21 @@
     <string name="theme_default">Фиолетовый (Оригинальный)</string>
     <string name="theme_dark">Темный (Dark)</string>
     <string name="theme_transparent">Полупрозрачный</string>
+    
+    <string name="font_settings">Размер шрифта</string>
+    <string name="font_small">Мелкий</string>
+    <string name="font_medium">Средний</string>
+    <string name="font_large">Крупный</string>
+
+    <string name="tag_settings">Фильтр по тегам</string>
+    <string name="tag_hint">Пример: #quotes</string>
+    <string name="tag_desc">Фильтр для случайных заметок. Оставьте пустым, чтобы отключить.</string>
+
+    <string name="blacklist_settings">Черный список папок</string>
+    <string name="blacklist_hint">через запятую: Templates, Archive</string>
+    
+    <string name="author_credit">Made by aristocrat\n@slamtgk</string>
+
     <string name="actions_section">Управление</string>
 
     <!-- Folder -->

@@ -68,16 +68,92 @@ object PreferencesManager {
         prefs(context).edit().putString("widget_theme", value).apply()
     }
 
-    // ── Cached file list ──────────────────────────────────────────────────────
+    // ── Font Size preference ──────────────────────────────────────────────────
+
+    const val FONT_SIZE_SMALL = "small"
+    const val FONT_SIZE_MEDIUM = "medium"
+    const val FONT_SIZE_LARGE = "large"
+
+    fun getFontSize(context: Context): String {
+        return prefs(context).getString("widget_font_size", FONT_SIZE_MEDIUM) ?: FONT_SIZE_MEDIUM
+    }
+
+    fun setFontSize(context: Context, value: String) {
+        prefs(context).edit().putString("widget_font_size", value).apply()
+    }
+
+    // ── Tag Filter preference ──────────────────────────────────────────────────
+
+    fun getTagFilter(context: Context): String {
+        return prefs(context).getString("tag_filter", "") ?: ""
+    }
+
+    fun setTagFilter(context: Context, value: String) {
+        prefs(context).edit().putString("tag_filter", value.trim()).apply()
+    }
+
+    // ── Folder Blacklist preference ───────────────────────────────────────────
+
+    fun getFolderBlacklist(context: Context): List<String> {
+        val raw = prefs(context).getString("folder_blacklist", "") ?: ""
+        if (raw.isBlank()) return emptyList()
+        return raw.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+    }
+
+    fun getFolderBlacklistRaw(context: Context): String {
+        return prefs(context).getString("folder_blacklist", "") ?: ""
+    }
+
+    fun setFolderBlacklistRaw(context: Context, value: String) {
+        prefs(context).edit().putString("folder_blacklist", value).apply()
+    }
+
+    // ── Cached file list (JSON Migration) ─────────────────────────────────────
+
+    private fun getCacheFile(context: Context): java.io.File {
+        return java.io.File(context.filesDir, "md_notes_cache.json")
+    }
 
     /** Returns list of URI strings cached during last scan. */
     fun getCachedFileUris(context: Context): List<String> {
-        val raw = prefs(context).getString(KEY_FILES_CACHE, "") ?: ""
-        return if (raw.isEmpty()) emptyList() else raw.split("\n").filter { it.isNotBlank() }
+        val file = getCacheFile(context)
+        if (!file.exists()) {
+            // Fallback to legacy shared prefs if json doesn't exist yet
+            val raw = prefs(context).getString(KEY_FILES_CACHE, "") ?: ""
+            if (raw.isNotEmpty()) {
+                val list = raw.split("\n").filter { it.isNotBlank() }
+                // migrate
+                setCachedFileUris(context, list)
+                prefs(context).edit().remove(KEY_FILES_CACHE).apply()
+                return list
+            }
+            return emptyList()
+        }
+
+        return try {
+            val jsonStr = file.readText()
+            val jsonArray = org.json.JSONArray(jsonStr)
+            val list = mutableListOf<String>()
+            for (i in 0 until jsonArray.length()) {
+                list.add(jsonArray.getString(i))
+            }
+            list
+        } catch (e: Exception) {
+            emptyList()
+        }
     }
 
+    /** Saves a new list of URI strings to JSON cache. */
     fun setCachedFileUris(context: Context, uris: List<String>) {
-        prefs(context).edit().putString(KEY_FILES_CACHE, uris.joinToString("\n")).apply()
+        try {
+            val jsonArray = org.json.JSONArray()
+            for (uri in uris) {
+                jsonArray.put(uri)
+            }
+            getCacheFile(context).writeText(jsonArray.toString())
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     // ── Per-widget current note ───────────────────────────────────────────────

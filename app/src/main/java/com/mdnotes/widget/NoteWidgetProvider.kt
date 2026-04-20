@@ -92,7 +92,15 @@ class NoteWidgetProvider : AppWidgetProvider() {
 
             views.setTextViewText(R.id.widget_title, note.title)
             views.setTextViewText(R.id.widget_content, truncatedContent)
-            views.setTextViewText(R.id.widget_filename, note.fileName)
+
+            // Apply font size preference
+            val fontSizeParam = PreferencesManager.getFontSize(context)
+            val spValue = when (fontSizeParam) {
+                PreferencesManager.FONT_SIZE_SMALL -> 10f
+                PreferencesManager.FONT_SIZE_LARGE -> 16f
+                else -> 12f // FONT_SIZE_MEDIUM
+            }
+            views.setFloat(R.id.widget_content, "setTextSize", spValue)
 
             views.setOnClickPendingIntent(
                 R.id.widget_root,
