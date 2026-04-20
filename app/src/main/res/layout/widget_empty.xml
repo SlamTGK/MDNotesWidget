@@ -1,50 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-    Widget state: folder selected but no .md files found inside.
-    Refresh button rescans, background tap opens settings.
--->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_empty_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:gravity="center"
-    android:background="@drawable/widget_background"
+    android:background="#1E1B4B"
     android:padding="16dp">
 
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="3dp"
-        android:layout_marginBottom="16dp"
-        android:background="@drawable/accent_line" />
-
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="📂"
-        android:textSize="28sp"
-        android:gravity="center" />
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
         android:text="@string/no_notes_found"
-        android:textColor="#FFFFFFFF"
-        android:textSize="13sp"
+        android:textColor="#FFFFFF"
+        android:textSize="14sp"
         android:textStyle="bold"
         android:gravity="center" />
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
+        android:layout_marginTop="6dp"
         android:text="@string/no_notes_hint"
-        android:textColor="#80A0B8CC"
-        android:textSize="10sp"
+        android:textColor="#80FFFFFF"
+        android:textSize="11sp"
         android:gravity="center" />
 
-    <!-- Refresh button -->
     <ImageView
         android:id="@+id/widget_empty_refresh"
         android:layout_width="36dp"
@@ -52,7 +33,7 @@
         android:layout_marginTop="12dp"
         android:src="@drawable/ic_refresh"
         android:padding="6dp"
-        android:alpha="0.7"
+        android:alpha="0.8"
         android:contentDescription="@string/refresh" />
 
 </LinearLayout>

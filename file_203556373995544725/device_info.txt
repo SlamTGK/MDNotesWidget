@@ -1,0 +1,24 @@
+build.board: taro
+build.bootloader: unknown
+build.brand: Xiaomi
+build.cpu_abi: arm64-v8a
+build.cpu_abi2: 
+build.device: cupid
+build.display: BP3A.250905.014 release-keys
+build.fingerprint: Xiaomi/cupid_global/cupid:15/AQ3A.241006.001/OS2.0.208.0.VLCMIXM:user/release-keys
+build.hardware: qcom
+build.host: r-6d12a775a2fb30a4-cdwb
+build.id: BP3A.250905.014
+build.manufacturer: Xiaomi
+build.model: 2201123G
+build.product: cupid
+build.radio: unknown
+build.serial: unknown
+build.tags: release-keys
+build.time: 1771790730000
+build.type: user
+build.user: android-build
+version.codename: REL
+version.incremental: 1087
+version.release: 16
+version.sdk_int: 36

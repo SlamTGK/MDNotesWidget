@@ -1,47 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-    Widget state: no folder configured yet.
-    Tapping anywhere opens the settings (MainActivity).
--->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_unconfigured_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:gravity="center"
-    android:background="@drawable/widget_background"
+    android:background="#1E1B4B"
     android:padding="16dp">
-
-    <!-- Top accent -->
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="3dp"
-        android:layout_marginBottom="16dp"
-        android:background="@drawable/accent_line" />
-
-    <ImageView
-        android:layout_width="32dp"
-        android:layout_height="32dp"
-        android:src="@drawable/ic_settings"
-        android:contentDescription="@string/settings" />
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
         android:text="@string/tap_to_configure"
-        android:textColor="#FFFFFFFF"
-        android:textSize="13sp"
+        android:textColor="#FFFFFF"
+        android:textSize="14sp"
         android:textStyle="bold"
         android:gravity="center" />
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
+        android:layout_marginTop="6dp"
         android:text="@string/configure_hint"
-        android:textColor="#80A0B8CC"
-        android:textSize="10sp"
+        android:textColor="#80FFFFFF"
+        android:textSize="11sp"
         android:gravity="center" />
 
 </LinearLayout>

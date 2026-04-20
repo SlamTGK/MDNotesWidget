@@ -31,8 +31,10 @@
             <ImageView
                 android:layout_width="72dp"
                 android:layout_height="72dp"
-                android:src="@mipmap/ic_launcher"
-                android:contentDescription="@string/app_name" />
+                android:src="@drawable/ic_launcher_foreground"
+                android:background="@drawable/ic_launcher_background"
+                android:contentDescription="@string/app_name"
+                android:padding="8dp" />
 
             <!-- App title -->
             <TextView
