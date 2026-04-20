@@ -16,6 +16,10 @@
     <string name="folder_settings">Папка с заметками</string>
     <string name="interval_settings">Интервал обновления</string>
     <string name="open_with_settings">Открывать в</string>
+    <string name="theme_settings">Стиль виджета</string>
+    <string name="theme_default">Фиолетовый (Оригинальный)</string>
+    <string name="theme_dark">Темный (Dark)</string>
+    <string name="theme_transparent">Полупрозрачный</string>
     <string name="actions_section">Управление</string>
 
     <!-- Folder -->

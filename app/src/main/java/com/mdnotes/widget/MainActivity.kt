@@ -66,6 +66,7 @@ class MainActivity : AppCompatActivity() {
         setupFolderSection()
         setupIntervalSection()
         setupOpenWithSection()
+        setupThemeSection()
         setupActionButtons()
     }
 
@@ -129,6 +130,28 @@ class MainActivity : AppCompatActivity() {
             else
                 PreferencesManager.OPEN_WITH_SYSTEM
             PreferencesManager.setOpenWith(this, value)
+        }
+    }
+
+    private fun setupThemeSection() {
+        val theme = PreferencesManager.getWidgetTheme(this)
+        when (theme) {
+            PreferencesManager.THEME_DARK -> findViewById<RadioButton>(R.id.radio_theme_dark).isChecked = true
+            PreferencesManager.THEME_TRANSPARENT -> findViewById<RadioButton>(R.id.radio_theme_transparent).isChecked = true
+            else -> findViewById<RadioButton>(R.id.radio_theme_default).isChecked = true
+        }
+
+        val group = findViewById<RadioGroup>(R.id.radio_group_theme)
+        group.setOnCheckedChangeListener { _, checkedId ->
+            val value = when (checkedId) {
+                R.id.radio_theme_dark -> PreferencesManager.THEME_DARK
+                R.id.radio_theme_transparent -> PreferencesManager.THEME_TRANSPARENT
+                else -> PreferencesManager.THEME_DEFAULT
+            }
+            PreferencesManager.setWidgetTheme(this, value)
+            
+            // Instantly update the widgets on the home screen to show the new theme
+            triggerWidgetUpdate()
         }
     }
 

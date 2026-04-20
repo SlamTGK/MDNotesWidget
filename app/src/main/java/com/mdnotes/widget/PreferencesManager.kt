@@ -54,6 +54,20 @@ object PreferencesManager {
         prefs(context).edit().putString(KEY_OPEN_WITH, value).apply()
     }
 
+    // ── Widget Theme preference ───────────────────────────────────────────────
+
+    const val THEME_DEFAULT = "default"
+    const val THEME_DARK = "dark"
+    const val THEME_TRANSPARENT = "transparent"
+
+    fun getWidgetTheme(context: Context): String {
+        return prefs(context).getString("widget_theme", THEME_DEFAULT) ?: THEME_DEFAULT
+    }
+
+    fun setWidgetTheme(context: Context, value: String) {
+        prefs(context).edit().putString("widget_theme", value).apply()
+    }
+
     // ── Cached file list ──────────────────────────────────────────────────────
 
     /** Returns list of URI strings cached during last scan. */

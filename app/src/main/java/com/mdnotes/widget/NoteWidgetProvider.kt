@@ -65,12 +65,24 @@ class NoteWidgetProvider : AppWidgetProvider() {
 
         // ── RemoteViews builders ──────────────────────────────────────────────
 
+        private fun applyThemeToViews(context: Context, views: RemoteViews, viewId: Int) {
+            val theme = PreferencesManager.getWidgetTheme(context)
+            val bgRes = when (theme) {
+                PreferencesManager.THEME_DARK -> R.drawable.widget_bg_dark
+                PreferencesManager.THEME_TRANSPARENT -> R.drawable.widget_bg_transparent
+                else -> R.drawable.widget_bg_default
+            }
+            // Use setInt to apply the background resource directly to the root layout tag
+            views.setInt(viewId, "setBackgroundResource", bgRes)
+        }
+
         private fun buildNoteViews(
             context: Context,
             widgetId: Int,
             note: MarkdownFileScanner.NoteContent
         ): RemoteViews {
             val views = RemoteViews(context.packageName, R.layout.widget_note)
+            applyThemeToViews(context, views, R.id.widget_root)
 
             val truncatedContent = if (note.content.length > 2000) {
                 note.content.take(2000) + "..."
@@ -96,6 +108,9 @@ class NoteWidgetProvider : AppWidgetProvider() {
 
         private fun buildUnconfiguredViews(context: Context, widgetId: Int): RemoteViews {
             val views = RemoteViews(context.packageName, R.layout.widget_unconfigured)
+            // Note: widget_unconfigured has no border radius layout currently but we apply plain hex or rounded theme
+            applyThemeToViews(context, views, R.id.widget_unconfigured_root)
+            
             val intent = Intent(context, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             }
@@ -109,6 +124,8 @@ class NoteWidgetProvider : AppWidgetProvider() {
 
         private fun buildEmptyViews(context: Context, widgetId: Int): RemoteViews {
             val views = RemoteViews(context.packageName, R.layout.widget_empty)
+            applyThemeToViews(context, views, R.id.widget_empty_root)
+
             views.setOnClickPendingIntent(
                 R.id.widget_empty_refresh,
                 buildRefreshPendingIntent(context, widgetId)

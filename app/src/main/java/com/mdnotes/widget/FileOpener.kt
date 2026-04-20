@@ -37,8 +37,12 @@ object FileOpener {
 
     private fun tryOpenWithObsidian(context: Context, absolutePath: String): Boolean {
         return try {
-            val encodedPath = Uri.encode(absolutePath)
-            val obsidianUri = Uri.parse("obsidian://open?path=$encodedPath")
+            // Obsidian Mobile prefers the 'file' parameter (note name without extension)
+            // instead of 'path', which often fails on Android 11+ due to scoped storage.
+            val fileName = absolutePath.substringAfterLast('/').removeSuffix(".md")
+            val encodedName = Uri.encode(fileName, "utf-8")
+            val obsidianUri = Uri.parse("obsidian://open?file=$encodedName")
+            
             val intent = Intent(Intent.ACTION_VIEW, obsidianUri).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
             }
