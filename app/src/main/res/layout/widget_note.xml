@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
     Widget layout — ZERO layout_weight usage (crashes RemoteViews on Android 12+).
-    Uses wrap_content / match_parent only.
+    Uses FrameLayout instead of View (View is NOT supported in RemoteViews).
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_root"
@@ -12,7 +12,7 @@
     android:background="@drawable/widget_background">
 
     <!-- Purple → cyan top accent line -->
-    <View
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="3dp"
         android:background="@drawable/accent_line" />
@@ -33,7 +33,7 @@
         android:ellipsize="end" />
 
     <!-- Divider -->
-    <View
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:layout_marginStart="14dp"
@@ -57,7 +57,7 @@
         android:ellipsize="end" />
 
     <!-- Spacer -->
-    <View
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1" />

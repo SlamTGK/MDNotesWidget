@@ -72,8 +72,14 @@ class NoteWidgetProvider : AppWidgetProvider() {
         ): RemoteViews {
             val views = RemoteViews(context.packageName, R.layout.widget_note)
 
+            val truncatedContent = if (note.content.length > 2000) {
+                note.content.take(2000) + "..."
+            } else {
+                note.content
+            }
+
             views.setTextViewText(R.id.widget_title, note.title)
-            views.setTextViewText(R.id.widget_content, note.content)
+            views.setTextViewText(R.id.widget_content, truncatedContent)
             views.setTextViewText(R.id.widget_filename, note.fileName)
 
             views.setOnClickPendingIntent(
