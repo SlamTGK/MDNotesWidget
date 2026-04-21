@@ -53,7 +53,7 @@ class NoteWidgetProvider : AppWidgetProvider() {
                         return@Thread
                     }
 
-                    appWidgetManager.updateAppWidget(widgetId, buildNoteViews(context, widgetId, note))
+                    appWidgetManager.updateAppWidget(widgetId, buildNoteViews(context, widgetId, note, appWidgetManager))
                 } catch (e: Exception) {
                     // If building views fails for any reason, fall back to empty state
                     try {
@@ -79,7 +79,8 @@ class NoteWidgetProvider : AppWidgetProvider() {
         private fun buildNoteViews(
             context: Context,
             widgetId: Int,
-            note: MarkdownFileScanner.NoteContent
+            note: MarkdownFileScanner.NoteContent,
+            appWidgetManager: AppWidgetManager? = null
         ): RemoteViews {
             val views = RemoteViews(context.packageName, R.layout.widget_note)
             applyThemeToViews(context, views, R.id.widget_root)
@@ -118,6 +119,29 @@ class NoteWidgetProvider : AppWidgetProvider() {
                 else -> 12f // FONT_SIZE_MEDIUM
             }
             views.setFloat(R.id.widget_content, "setTextSize", spValue)
+
+            // Calculate maxLines to avoid partial lines
+            if (appWidgetManager != null) {
+                try {
+                    val options = appWidgetManager.getAppWidgetOptions(widgetId)
+                    val isPortrait = context.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_PORTRAIT
+                    val heightDp = if (isPortrait) {
+                        options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT)
+                    } else {
+                        options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT)
+                    }
+                    
+                    if (heightDp > 0) {
+                        // Total static height approx: Top bar (12+4) + Title (~30) + Meta (~14) + paddings (~22) = 82dp
+                        val availableHeightDp = heightDp - 82
+                        // lineSpacingMultiplier is 1.3 in XML. SP is roughly equal to DP here.
+                        val lineHeightDp = spValue * 1.35f
+                        var maxLines = (availableHeightDp / lineHeightDp).toInt()
+                        if (maxLines < 1) maxLines = 1
+                        views.setInt(R.id.widget_content, "setMaxLines", maxLines)
+                    }
+                } catch (_: Exception) {}
+            }
 
             views.setOnClickPendingIntent(
                 R.id.widget_root,
@@ -232,6 +256,29 @@ class NoteWidgetProvider : AppWidgetProvider() {
     ) {
         for (widgetId in appWidgetIds) {
             updateWidget(context, appWidgetManager, widgetId)
+        }
+    }
+
+    override fun onAppWidgetOptionsChanged(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetId: Int,
+        newOptions: Bundle
+    ) {
+        super.onAppWidgetOptionsChanged(context, appWidgetManager, appWidgetId, newOptions)
+        // Extract current note URI and re-render without picking a new random file
+        val currentUriStr = PreferencesManager.getCurrentNoteUri(context, appWidgetId)
+        if (currentUriStr != null) {
+            Thread {
+                try {
+                    val note = MarkdownFileScanner.readNoteContent(context, Uri.parse(currentUriStr))
+                    if (note != null) {
+                        appWidgetManager.updateAppWidget(appWidgetId, buildNoteViews(context, appWidgetId, note, appWidgetManager))
+                    }
+                } catch (e: Exception) {}
+            }.start()
+        } else {
+            updateWidget(context, appWidgetManager, appWidgetId)
         }
     }
 
