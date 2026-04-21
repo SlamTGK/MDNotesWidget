@@ -93,6 +93,23 @@ class NoteWidgetProvider : AppWidgetProvider() {
             views.setTextViewText(R.id.widget_title, note.title)
             views.setTextViewText(R.id.widget_content, truncatedContent)
 
+            // Format date and folder name
+            val dateFormat = java.text.SimpleDateFormat("d MMMM yyyy", java.util.Locale.getDefault())
+            val dateString = if (note.lastModified > 0) dateFormat.format(java.util.Date(note.lastModified)) else ""
+            val metaString = buildString {
+                append(dateString)
+                if (note.folderName.isNotEmpty()) {
+                    if (isNotEmpty()) append(", ")
+                    append("Папка: ${note.folderName}")
+                }
+            }
+            if (metaString.isNotEmpty()) {
+                views.setTextViewText(R.id.widget_meta, metaString)
+                views.setViewVisibility(R.id.widget_meta, android.view.View.VISIBLE)
+            } else {
+                views.setViewVisibility(R.id.widget_meta, android.view.View.GONE)
+            }
+
             // Apply font size preference
             val fontSizeParam = PreferencesManager.getFontSize(context)
             val spValue = when (fontSizeParam) {
@@ -183,9 +200,14 @@ class NoteWidgetProvider : AppWidgetProvider() {
         // ── WorkManager ───────────────────────────────────────────────────────
 
         fun scheduleWork(context: Context) {
-            val hours = PreferencesManager.getIntervalHours(context).toLong()
+            val minutes = PreferencesManager.getIntervalMinutes(context).toLong()
+            if (minutes < 0) {
+                cancelWork(context)
+                return
+            }
+            
             val constraints = Constraints.Builder().build()
-            val request = PeriodicWorkRequestBuilder<WidgetUpdateWorker>(hours, TimeUnit.HOURS)
+            val request = PeriodicWorkRequestBuilder<WidgetUpdateWorker>(minutes, TimeUnit.MINUTES)
                 .setConstraints(constraints)
                 .build()
 

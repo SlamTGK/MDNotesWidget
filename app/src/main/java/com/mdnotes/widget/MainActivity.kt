@@ -94,24 +94,47 @@ class MainActivity : AppCompatActivity() {
     private fun setupIntervalSection() {
         val seekBar = findViewById<SeekBar>(R.id.seekbar_interval)
         val tvValue = findViewById<TextView>(R.id.tv_interval_value)
-        val current = PreferencesManager.getIntervalHours(this)
+        val currentMinutes = PreferencesManager.getIntervalMinutes(this)
 
-        seekBar.max = 23 // 0..23 maps to 1..24 hours
-        seekBar.progress = current - 1
-        tvValue.text = formatHours(current)
+        seekBar.max = 25 // 0=Off, 1=30m, 2=1h..25=24h
+        seekBar.progress = minutesToProgress(currentMinutes)
+        tvValue.text = formatInterval(currentMinutes)
 
         seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(bar: SeekBar, progress: Int, fromUser: Boolean) {
-                val hours = progress + 1
-                tvValue.text = formatHours(hours)
+                val minutes = progressToMinutes(progress)
+                tvValue.text = formatInterval(minutes)
                 if (fromUser) {
-                    PreferencesManager.setIntervalHours(this@MainActivity, hours)
+                    PreferencesManager.setIntervalMinutes(this@MainActivity, minutes)
                     NoteWidgetProvider.scheduleWork(this@MainActivity)
                 }
             }
             override fun onStartTrackingTouch(bar: SeekBar) {}
             override fun onStopTrackingTouch(bar: SeekBar) {}
         })
+    }
+
+    private fun progressToMinutes(progress: Int): Int {
+        return when (progress) {
+            0 -> -1
+            1 -> 30
+            else -> (progress - 1) * 60
+        }
+    }
+
+    private fun minutesToProgress(minutes: Int): Int {
+        return when {
+            minutes < 0 -> 0
+            minutes == 30 -> 1
+            else -> (minutes / 60) + 1
+        }
+    }
+
+    private fun formatInterval(minutes: Int): String {
+        if (minutes < 0) return getString(R.string.interval_off)
+        if (minutes == 30) return getString(R.string.interval_30m)
+        val hours = minutes / 60
+        return resources.getQuantityString(R.plurals.hours_format, hours, hours)
     }
 
     private fun setupOpenWithSection() {
@@ -236,6 +259,11 @@ class MainActivity : AppCompatActivity() {
                 triggerWidgetUpdate()
             }.start()
         }
+        // Author credit click
+        findViewById<TextView>(R.id.tv_author_credit)?.setOnClickListener {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://t.me/slamtgk"))
+            startActivity(intent)
+        }
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
@@ -251,10 +279,6 @@ class MainActivity : AppCompatActivity() {
     private fun updateFileCountBadge(count: Int) {
         val tv = findViewById<TextView>(R.id.tv_file_count)
         tv.text = if (count == 0) "" else getString(R.string.file_count, count)
-    }
-
-    private fun formatHours(hours: Int): String {
-        return resources.getQuantityString(R.plurals.hours_format, hours, hours)
     }
 
     private fun triggerWidgetUpdate() {

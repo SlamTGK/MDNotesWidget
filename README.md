@@ -1,5 +1,4 @@
 <div align="center">
-  <img src="app/src/main/res/mipmap-xxxhdpi/ic_launcher.webp" alt="App Icon" width="128"/>
   <h1>MD Notes Widget</h1>
   <p><b>Минималистичный, красивый и энергоэффективный Android-виджет для ваших Markdown-заметок.</b></p>
   

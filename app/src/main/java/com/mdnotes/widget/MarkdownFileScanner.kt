@@ -80,16 +80,27 @@ object MarkdownFileScanner {
         return try {
             val file = DocumentFile.fromSingleUri(context, fileUri) ?: return null
             val name = file.name ?: return null
+            val lastModified = file.lastModified()
 
             val rawContent = context.contentResolver.openInputStream(fileUri)?.use { stream ->
                 stream.bufferedReader(Charsets.UTF_8).readText()
             } ?: return null
 
+            val segment = fileUri.lastPathSegment ?: ""
+            val parts = segment.split("/")
+            val folderName = if (parts.size > 1) {
+                parts[parts.size - 2].replace(Regex("^.*:"), "")
+            } else {
+                ""
+            }
+
             NoteContent(
                 title = name.removeSuffix(".md"),
                 content = stripMarkdown(rawContent),
                 fileName = name,
-                uri = fileUri
+                uri = fileUri,
+                lastModified = lastModified,
+                folderName = folderName
             )
         } catch (e: Exception) {
             null
@@ -163,6 +174,8 @@ object MarkdownFileScanner {
         val title: String,
         val content: String,
         val fileName: String,
-        val uri: Uri
+        val uri: Uri,
+        val lastModified: Long,
+        val folderName: String
     )
 }

@@ -31,7 +31,10 @@
     <string name="tag_desc">Фильтр для случайных заметок. Оставьте пустым, чтобы отключить.</string>
 
     <string name="blacklist_settings">Черный список папок</string>
-    <string name="blacklist_hint">через запятую: Templates, Archive</string>
+    <string name="blacklist_hint">через ; : Templates; Archive</string>
+    
+    <string name="interval_off">Выкл</string>
+    <string name="interval_30m">30 мин</string>
     
     <string name="author_credit">Made by aristocrat\n@slamtgk</string>
 

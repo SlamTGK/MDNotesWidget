@@ -14,7 +14,8 @@ object PreferencesManager {
 
     // Keys
     private const val KEY_FOLDER_URI = "folder_uri"
-    private const val KEY_INTERVAL_HOURS = "interval_hours"
+    private const val KEY_INTERVAL_MINUTES = "interval_minutes"
+    private const val KEY_INTERVAL_HOURS = "interval_hours" // Legacy
     private const val KEY_OPEN_WITH = "open_with"
     private const val KEY_FILES_CACHE = "files_cache"
 
@@ -35,13 +36,24 @@ object PreferencesManager {
 
     // ── Update interval ───────────────────────────────────────────────────────
 
-    /** Returns the configured interval in hours (default 1, range 1–24). */
-    fun getIntervalHours(context: Context): Int {
-        return prefs(context).getInt(KEY_INTERVAL_HOURS, 1).coerceIn(1, 24)
+    /** Returns the configured interval in minutes. Defaults to 60. Returns -1 for off. */
+    fun getIntervalMinutes(context: Context): Int {
+        val prefs = prefs(context)
+        if (prefs.contains(KEY_INTERVAL_MINUTES)) {
+            return prefs.getInt(KEY_INTERVAL_MINUTES, 60)
+        }
+        // Fallback to legacy hours if exists
+        if (prefs.contains(KEY_INTERVAL_HOURS)) {
+            val hours = prefs.getInt(KEY_INTERVAL_HOURS, 1)
+            val minutes = hours * 60
+            setIntervalMinutes(context, minutes)
+            return minutes
+        }
+        return 60
     }
 
-    fun setIntervalHours(context: Context, hours: Int) {
-        prefs(context).edit().putInt(KEY_INTERVAL_HOURS, hours.coerceIn(1, 24)).apply()
+    fun setIntervalMinutes(context: Context, minutes: Int) {
+        prefs(context).edit().putInt(KEY_INTERVAL_MINUTES, minutes).apply()
     }
 
     // ── Open-with preference ──────────────────────────────────────────────────
@@ -97,7 +109,7 @@ object PreferencesManager {
     fun getFolderBlacklist(context: Context): List<String> {
         val raw = prefs(context).getString("folder_blacklist", "") ?: ""
         if (raw.isBlank()) return emptyList()
-        return raw.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+        return raw.split(";").map { it.trim() }.filter { it.isNotEmpty() }
     }
 
     fun getFolderBlacklistRaw(context: Context): String {
