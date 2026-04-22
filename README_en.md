@@ -18,7 +18,8 @@
 * ⚡ **Obsidian Integration**: Deeply respects Obsidian paths. Tapping a widget opens the exact note directly directly inside the Obsidian Android app.
 * 🏷️ **Tag Filtering**: Want to see only specific notes? Set a tag filter (e.g., `#quote`), and the widget will only display notes containing that tag.
 * 🚫 **Folder Blacklisting**: Easily ignore specific sub-folders like `Templates`, `Daily Notes`, or `Archive` during scanning.
-* 🔋 **Absolute Zero Battery Drain**: Operates locally using Android's modern `WorkManager`. The app sleeps completely between cycles, using absolutely zero battery or background CPU points. Updates are lightning fast due to an optimized JSON internal caching system.
+* 📅 **Note Metadata**: The widget now displays the last modification date and the folder name where the note is stored.
+* 🔋 **Optimized Battery Life**: Built on efficient system schedulers. The app sleeps between update cycles, consuming minimal energy. Updates are lightning-fast thanks to an optimized internal JSON caching system.
 * 🔒 **Privacy First**: Completely offline. No internet access required. Uses Android SAF (Storage Access Framework) to securely access only the specific folder you grant it.
 
 ## 🛠️ Requirements
@@ -30,6 +31,8 @@
 1. Go to the [Releases](https://github.com/SlamTGK/MDNotesWidget/releases) page.
 2. Download the latest `app-release.apk`.
 3. Install the APK on your Android device.
+
+*(Note for Xiaomi/HyperOS users: For stable scheduled updates, it is recommended to enable "Autostart" and set Battery Saver to "No Restrictions" for this app).*
 
 ## 👨‍💻 Author
 
