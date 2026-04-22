@@ -39,26 +39,15 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="com.mdnotes.widget.ACTION_REFRESH" />
                 <action android:name="com.mdnotes.widget.ACTION_OPEN_NOTE" />
+                <action android:name="com.mdnotes.widget.ACTION_PERIODIC_UPDATE" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/note_widget_info" />
         </receiver>
-
-        <!-- WorkManager initialization (disable default initializer, use custom MDNotesApp) -->
-        <provider
-            android:name="androidx.startup.InitializationProvider"
-            android:authorities="${applicationId}.androidx-startup"
-            android:exported="false"
-            tools:node="merge"
-            xmlns:tools="http://schemas.android.com/tools">
-            <meta-data
-                android:name="androidx.work.WorkManagerInitializer"
-                android:value="androidx.startup"
-                tools:node="remove" />
-        </provider>
 
     </application>
 </manifest>

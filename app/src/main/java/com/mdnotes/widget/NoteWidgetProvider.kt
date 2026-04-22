@@ -9,7 +9,6 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.widget.RemoteViews
-import androidx.work.*
 import java.util.concurrent.TimeUnit
 
 class NoteWidgetProvider : AppWidgetProvider() {
@@ -17,11 +16,21 @@ class NoteWidgetProvider : AppWidgetProvider() {
     companion object {
         const val ACTION_REFRESH   = "com.mdnotes.widget.ACTION_REFRESH"
         const val ACTION_OPEN_NOTE = "com.mdnotes.widget.ACTION_OPEN_NOTE"
+        const val ACTION_PERIODIC_UPDATE = "com.mdnotes.widget.ACTION_PERIODIC_UPDATE"
         const val EXTRA_WIDGET_ID  = "extra_widget_id"
         const val EXTRA_NOTE_URI   = "extra_note_uri"
-        const val WORK_NAME        = "md_notes_periodic_update"
 
         fun updateWidget(
+            context: Context,
+            appWidgetManager: AppWidgetManager,
+            widgetId: Int
+        ) {
+            Thread {
+                updateWidgetSync(context, appWidgetManager, widgetId)
+            }.start()
+        }
+
+        fun updateWidgetSync(
             context: Context,
             appWidgetManager: AppWidgetManager,
             widgetId: Int
@@ -35,33 +44,29 @@ class NoteWidgetProvider : AppWidgetProvider() {
                 return
             }
 
-            // File I/O on background thread — appWidgetManager is safe to call from any thread
-            Thread {
-                try {
-                    val fileUri = MarkdownFileScanner.getRandomFile(context, folderUri)
+            try {
+                val fileUri = MarkdownFileScanner.getRandomFile(context, folderUri)
 
-                    if (fileUri == null) {
-                        appWidgetManager.updateAppWidget(widgetId, buildEmptyViews(context, widgetId))
-                        return@Thread
-                    }
-
-                    PreferencesManager.setCurrentNoteUri(context, widgetId, fileUri.toString())
-
-                    val note = MarkdownFileScanner.readNoteContent(context, fileUri)
-
-                    if (note == null) {
-                        appWidgetManager.updateAppWidget(widgetId, buildEmptyViews(context, widgetId))
-                        return@Thread
-                    }
-
-                    appWidgetManager.updateAppWidget(widgetId, buildNoteViews(context, widgetId, note, appWidgetManager))
-                } catch (e: Exception) {
-                    // If building views fails for any reason, fall back to empty state
-                    try {
-                        appWidgetManager.updateAppWidget(widgetId, buildEmptyViews(context, widgetId))
-                    } catch (_: Exception) {}
+                if (fileUri == null) {
+                    appWidgetManager.updateAppWidget(widgetId, buildEmptyViews(context, widgetId))
+                    return
                 }
-            }.start()
+
+                PreferencesManager.setCurrentNoteUri(context, widgetId, fileUri.toString())
+
+                val note = MarkdownFileScanner.readNoteContent(context, fileUri)
+
+                if (note == null) {
+                    appWidgetManager.updateAppWidget(widgetId, buildEmptyViews(context, widgetId))
+                    return
+                }
+
+                appWidgetManager.updateAppWidget(widgetId, buildNoteViews(context, widgetId, note, appWidgetManager))
+            } catch (e: Exception) {
+                try {
+                    appWidgetManager.updateAppWidget(widgetId, buildEmptyViews(context, widgetId))
+                } catch (_: Exception) {}
+            }
         }
 
         // ── RemoteViews builders ──────────────────────────────────────────────
@@ -222,29 +227,45 @@ class NoteWidgetProvider : AppWidgetProvider() {
             )
         }
 
-        // ── WorkManager ───────────────────────────────────────────────────────
+        // ── AlarmManager ───────────────────────────────────────────────────────
 
         fun scheduleWork(context: Context) {
             val minutes = PreferencesManager.getIntervalMinutes(context).toLong()
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
+            val intent = Intent(context, NoteWidgetProvider::class.java).apply {
+                action = ACTION_PERIODIC_UPDATE
+            }
+            val pi = PendingIntent.getBroadcast(
+                context, 0, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+
             if (minutes < 0) {
-                cancelWork(context)
+                alarmManager.cancel(pi)
                 return
             }
-            
-            val constraints = Constraints.Builder().build()
-            val request = PeriodicWorkRequestBuilder<WidgetUpdateWorker>(minutes, TimeUnit.MINUTES)
-                .setConstraints(constraints)
-                .build()
 
-            WorkManager.getInstance(context).enqueueUniquePeriodicWork(
-                WORK_NAME,
-                ExistingPeriodicWorkPolicy.UPDATE,
-                request
+            val intervalMillis = minutes * 60 * 1000
+            
+            // Use setRepeating for consistent widget updates, it will wake the device or batch with other alarms
+            alarmManager.setRepeating(
+                android.app.AlarmManager.RTC_WAKEUP,
+                System.currentTimeMillis() + intervalMillis,
+                intervalMillis,
+                pi
             )
         }
 
         fun cancelWork(context: Context) {
-            WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME)
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
+            val intent = Intent(context, NoteWidgetProvider::class.java).apply {
+                action = ACTION_PERIODIC_UPDATE
+            }
+            val pi = PendingIntent.getBroadcast(
+                context, 0, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            alarmManager.cancel(pi)
         }
     }
 
@@ -255,9 +276,16 @@ class NoteWidgetProvider : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray
     ) {
-        for (widgetId in appWidgetIds) {
-            updateWidget(context, appWidgetManager, widgetId)
-        }
+        val pendingResult = goAsync()
+        Thread {
+            try {
+                for (widgetId in appWidgetIds) {
+                    updateWidgetSync(context, appWidgetManager, widgetId)
+                }
+            } finally {
+                pendingResult.finish()
+            }
+        }.start()
     }
 
     override fun onAppWidgetOptionsChanged(
@@ -267,20 +295,25 @@ class NoteWidgetProvider : AppWidgetProvider() {
         newOptions: Bundle
     ) {
         super.onAppWidgetOptionsChanged(context, appWidgetManager, appWidgetId, newOptions)
-        // Extract current note URI and re-render without picking a new random file
-        val currentUriStr = PreferencesManager.getCurrentNoteUri(context, appWidgetId)
-        if (currentUriStr != null) {
-            Thread {
-                try {
+        val pendingResult = goAsync()
+        Thread {
+            try {
+                val currentUriStr = PreferencesManager.getCurrentNoteUri(context, appWidgetId)
+                if (currentUriStr != null) {
                     val note = MarkdownFileScanner.readNoteContent(context, Uri.parse(currentUriStr))
                     if (note != null) {
                         appWidgetManager.updateAppWidget(appWidgetId, buildNoteViews(context, appWidgetId, note, appWidgetManager))
+                    } else {
+                        updateWidgetSync(context, appWidgetManager, appWidgetId)
                     }
-                } catch (e: Exception) {}
-            }.start()
-        } else {
-            updateWidget(context, appWidgetManager, appWidgetId)
-        }
+                } else {
+                    updateWidgetSync(context, appWidgetManager, appWidgetId)
+                }
+            } catch (e: Exception) {
+            } finally {
+                pendingResult.finish()
+            }
+        }.start()
     }
 
     override fun onEnabled(context: Context) {
@@ -307,8 +340,36 @@ class NoteWidgetProvider : AppWidgetProvider() {
             ACTION_REFRESH -> {
                 val id = intent.getIntExtra(EXTRA_WIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
                 if (id != AppWidgetManager.INVALID_APPWIDGET_ID) {
-                    updateWidget(context, AppWidgetManager.getInstance(context), id)
+                    val pendingResult = goAsync()
+                    Thread {
+                        try {
+                            updateWidgetSync(context, AppWidgetManager.getInstance(context), id)
+                        } finally {
+                            pendingResult.finish()
+                        }
+                    }.start()
                 }
+            }
+            Intent.ACTION_BOOT_COMPLETED, "android.intent.action.BOOT_COMPLETED" -> {
+                scheduleWork(context)
+            }
+            ACTION_PERIODIC_UPDATE -> {
+                val pendingResult = goAsync()
+                Thread {
+                    try {
+                        val folderUri = PreferencesManager.getFolderUri(context)
+                        if (folderUri != null) {
+                            MarkdownFileScanner.refreshCache(context, folderUri)
+                        }
+                        val manager = AppWidgetManager.getInstance(context)
+                        val ids = manager.getAppWidgetIds(ComponentName(context, NoteWidgetProvider::class.java))
+                        for (widgetId in ids) {
+                            updateWidgetSync(context, manager, widgetId)
+                        }
+                    } finally {
+                        pendingResult.finish()
+                    }
+                }.start()
             }
             ACTION_OPEN_NOTE -> {
                 val uriStr = intent.getStringExtra(EXTRA_NOTE_URI)

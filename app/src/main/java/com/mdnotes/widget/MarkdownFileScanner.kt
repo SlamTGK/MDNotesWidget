@@ -64,7 +64,7 @@ object MarkdownFileScanner {
 
     /**
      * Forces a rescan of the folder and updates the cache.
-     * Should be called periodically (e.g., from WorkManager) to pick up new files.
+     * Should be called periodically (e.g., from AlarmManager) to pick up new files.
      */
     fun refreshCache(context: Context, folderUri: Uri): Int {
         val uris = scanFolder(context, folderUri).map { it.toString() }
