@@ -1,9 +1,7 @@
 package com.mdnotes.widget
 
 import android.content.Intent
-import android.graphics.ImageDecoder
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.provider.DocumentsContract
 import android.view.LayoutInflater
@@ -14,7 +12,6 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager2.widget.ViewPager2
@@ -44,12 +41,16 @@ class NoteViewerActivity : AppCompatActivity() {
         viewPager = findViewById(R.id.viewpager_notes)
         bottomNav = findViewById(R.id.bottom_nav)
 
-        // Back navigation
+        // Back navigation — just finish, taskAffinity="" ensures return to home screen
         toolbar.setNavigationOnClickListener { finish() }
         toolbar.setOnMenuItemClickListener { item ->
             when (item.itemId) {
+                R.id.action_open_obsidian -> {
+                    currentNoteUri?.let { openInObsidian(it) }
+                    true
+                }
                 R.id.action_open_external -> {
-                    currentNoteUri?.let { openExternal(it) }
+                    currentNoteUri?.let { openWithSystemChooser(it) }
                     true
                 }
                 else -> false
@@ -90,7 +91,7 @@ class NoteViewerActivity : AppCompatActivity() {
                     true
                 }
                 R.id.nav_open -> {
-                    currentNoteUri?.let { openExternal(it) }
+                    currentNoteUri?.let { openInObsidian(it) }
                     true
                 }
                 else -> false
@@ -147,32 +148,35 @@ class NoteViewerActivity : AppCompatActivity() {
         }
     }
 
-    private fun openExternal(uri: Uri) {
-        val openWith = PreferencesManager.getOpenWith(this)
-        if (openWith == PreferencesManager.OPEN_WITH_OBSIDIAN) {
-            val absolutePath = FileOpener.resolveAbsolutePath(uri)
-            if (absolutePath != null) {
-                try {
-                    val pathParts = absolutePath.removePrefix("/storage/emulated/0/").split("/")
-                    val vaultName = if (pathParts.size >= 2) pathParts[0] else null
-                    val relativePath = if (vaultName != null && pathParts.size >= 2) {
-                        pathParts.drop(1).joinToString("/").removeSuffix(".md")
-                    } else {
-                        absolutePath.substringAfterLast('/').removeSuffix(".md")
-                    }
-                    val uriBuilder = StringBuilder("obsidian://open?")
-                    if (vaultName != null) uriBuilder.append("vault=${Uri.encode(vaultName)}&")
-                    uriBuilder.append("file=${Uri.encode(relativePath)}")
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uriBuilder.toString())).apply {
-                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                    }
-                    startActivity(intent)
-                    return
-                } catch (_: Exception) {}
-            }
-        }
+    // ── Open in Obsidian ──────────────────────────────────────────────────────
 
-        // System chooser fallback
+    private fun openInObsidian(uri: Uri) {
+        val absolutePath = FileOpener.resolveAbsolutePath(uri)
+        if (absolutePath != null) {
+            try {
+                val pathParts = absolutePath.removePrefix("/storage/emulated/0/").split("/")
+                val vaultName = if (pathParts.size >= 2) pathParts[0] else null
+                val relativePath = if (vaultName != null && pathParts.size >= 2) {
+                    pathParts.drop(1).joinToString("/").removeSuffix(".md")
+                } else {
+                    absolutePath.substringAfterLast('/').removeSuffix(".md")
+                }
+                val uriBuilder = StringBuilder("obsidian://open?")
+                if (vaultName != null) uriBuilder.append("vault=${Uri.encode(vaultName)}&")
+                uriBuilder.append("file=${Uri.encode(relativePath)}")
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uriBuilder.toString())).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+                startActivity(intent)
+                return
+            } catch (_: Exception) {}
+        }
+        Toast.makeText(this, getString(R.string.obsidian_not_installed), Toast.LENGTH_SHORT).show()
+    }
+
+    // ── Open with system chooser ──────────────────────────────────────────────
+
+    private fun openWithSystemChooser(uri: Uri) {
         for (mimeType in listOf("text/markdown", "text/plain", "*/*")) {
             try {
                 val viewIntent = Intent(Intent.ACTION_VIEW).apply {
@@ -241,19 +245,13 @@ class NoteViewerActivity : AppCompatActivity() {
 
     private fun loadImages(note: MarkdownFileScanner.NoteContent, container: LinearLayout) {
         lifecycleScope.launch {
-            for (imageRef in note.imageRefs.take(5)) { // Limit to 5 images
+            for (imageRef in note.imageRefs.take(5)) {
                 val bitmap = withContext(Dispatchers.IO) {
                     try {
-                        // Try to resolve image relative to note's folder
-                        val noteSegment = note.uri.lastPathSegment ?: return@withContext null
-                        val noteFolder = noteSegment.substringBeforeLast('/')
-                        val imagePath = "$noteFolder/$imageRef"
-
-                        // Construct image URI from SAF tree
                         val folderUri = PreferencesManager.getFolderUri(this@NoteViewerActivity)
                             ?: return@withContext null
                         val treeDocId = DocumentsContract.getTreeDocumentId(folderUri)
-                        val imageDocId = "$treeDocId/${imageRef}"
+                        val imageDocId = "$treeDocId/$imageRef"
                         val imageUri = DocumentsContract.buildDocumentUriUsingTree(folderUri, imageDocId)
 
                         contentResolver.openInputStream(imageUri)?.use { stream ->

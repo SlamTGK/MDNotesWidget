@@ -42,8 +42,8 @@
     <string name="interval_30m">30 мин</string>
     <string name="interval_max">24 ч</string>
 
-    <string name="app_version">v2.0</string>
-    <string name="author_credit">MD Notes Widget v2.0\nMade by aristocrat \u2022 @slamtgk</string>
+    <string name="app_version">v2.1</string>
+    <string name="author_credit">MD Notes Widget v2.1\nMade by aristocrat \u2022 @slamtgk</string>
     <string name="actions_section">Управление</string>
 
     <!-- Folder -->

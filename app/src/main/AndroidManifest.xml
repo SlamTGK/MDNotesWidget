@@ -35,14 +35,18 @@
             android:name=".NoteViewerActivity"
             android:exported="false"
             android:label="@string/app_name"
-            android:theme="@style/Theme.MDNotesWidget.NoteViewer" />
+            android:theme="@style/Theme.MDNotesWidget.NoteViewer"
+            android:taskAffinity=""
+            android:excludeFromRecents="true" />
 
         <!-- History activity -->
         <activity
             android:name=".HistoryActivity"
             android:exported="false"
             android:label="@string/history"
-            android:theme="@style/Theme.MDNotesWidget.NoteViewer" />
+            android:theme="@style/Theme.MDNotesWidget.NoteViewer"
+            android:taskAffinity=""
+            android:excludeFromRecents="true" />
 
         <!-- Single note widget receiver -->
         <receiver
