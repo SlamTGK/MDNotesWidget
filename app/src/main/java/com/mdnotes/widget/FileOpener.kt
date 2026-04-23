@@ -7,42 +7,66 @@ import android.provider.DocumentsContract
 import android.widget.Toast
 
 /**
- * Handles opening a .md file in either Obsidian or the system app chooser.
- *
- * Obsidian URI scheme: obsidian://open?path=<url-encoded-absolute-path>
- * We derive the absolute path from the SAF document ID when possible.
+ * Handles opening a .md file in either Obsidian, the system app chooser,
+ * or the built-in NoteViewerActivity.
  */
 object FileOpener {
 
     fun openFile(context: Context, fileUri: Uri) {
         val openWith = PreferencesManager.getOpenWith(context)
 
-        if (openWith == PreferencesManager.OPEN_WITH_OBSIDIAN) {
-            val absolutePath = resolveAbsolutePath(fileUri)
-            if (absolutePath != null && tryOpenWithObsidian(context, absolutePath)) {
-                return // Successfully opened in Obsidian
+        when (openWith) {
+            PreferencesManager.OPEN_WITH_VIEWER -> {
+                openInViewer(context, fileUri)
+                return
             }
-            // Obsidian not installed or path not resolvable — fall through to system chooser
-            Toast.makeText(
-                context,
-                context.getString(R.string.obsidian_not_installed),
-                Toast.LENGTH_SHORT
-            ).show()
+            PreferencesManager.OPEN_WITH_OBSIDIAN -> {
+                val absolutePath = resolveAbsolutePath(fileUri)
+                if (absolutePath != null && tryOpenWithObsidian(context, absolutePath)) {
+                    return
+                }
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.obsidian_not_installed),
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
         }
 
         openWithSystemChooser(context, fileUri)
     }
 
-    // ── Private helpers ───────────────────────────────────────────────────────
+    private fun openInViewer(context: Context, fileUri: Uri) {
+        val intent = Intent(context, NoteViewerActivity::class.java).apply {
+            putExtra(NoteViewerActivity.EXTRA_NOTE_URI, fileUri.toString())
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        context.startActivity(intent)
+    }
 
     private fun tryOpenWithObsidian(context: Context, absolutePath: String): Boolean {
         return try {
-            // Obsidian Mobile prefers the 'file' parameter (note name without extension)
-            // instead of 'path', which often fails on Android 11+ due to scoped storage.
+            // Use vault + path parameters for more reliable deep-linking
+            val folderUri = absolutePath.substringBeforeLast('/')
             val fileName = absolutePath.substringAfterLast('/').removeSuffix(".md")
-            val encodedName = Uri.encode(fileName, "utf-8")
-            val obsidianUri = Uri.parse("obsidian://open?file=$encodedName")
-            
+
+            // Try to extract vault name from path pattern: /storage/.../VaultName/...
+            // Obsidian vaults are typically top-level folders
+            val pathParts = absolutePath.removePrefix("/storage/emulated/0/").split("/")
+            val vaultName = if (pathParts.size >= 2) pathParts[0] else null
+            val relativePath = if (vaultName != null && pathParts.size >= 2) {
+                pathParts.drop(1).joinToString("/").removeSuffix(".md")
+            } else {
+                fileName
+            }
+
+            val uriBuilder = StringBuilder("obsidian://open?")
+            if (vaultName != null) {
+                uriBuilder.append("vault=${Uri.encode(vaultName)}&")
+            }
+            uriBuilder.append("file=${Uri.encode(relativePath)}")
+
+            val obsidianUri = Uri.parse(uriBuilder.toString())
             val intent = Intent(Intent.ACTION_VIEW, obsidianUri).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
             }
@@ -54,7 +78,6 @@ object FileOpener {
     }
 
     private fun openWithSystemChooser(context: Context, fileUri: Uri) {
-        // Try text/markdown first, fall back to text/plain
         for (mimeType in listOf("text/markdown", "text/plain", "*/*")) {
             try {
                 val viewIntent = Intent(Intent.ACTION_VIEW).apply {
@@ -77,17 +100,9 @@ object FileOpener {
         Toast.makeText(context, context.getString(R.string.error_opening_file), Toast.LENGTH_SHORT).show()
     }
 
-    /**
-     * Resolves the absolute filesystem path from a SAF document URI.
-     *
-     * Works for standard external storage URIs:
-     *   content://com.android.externalstorage.documents/document/primary%3AFolder%2Ffile.md
-     *   → /storage/emulated/0/Folder/file.md
-     */
-    private fun resolveAbsolutePath(uri: Uri): String? {
+    fun resolveAbsolutePath(uri: Uri): String? {
         return try {
             val docId = DocumentsContract.getDocumentId(uri)
-            // Format: "primary:path/to/file.md" or "XXXX-XXXX:path/to/file.md"
             val colonIdx = docId.indexOf(':')
             if (colonIdx == -1) return null
 

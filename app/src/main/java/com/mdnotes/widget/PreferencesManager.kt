@@ -6,7 +6,7 @@ import android.net.Uri
 /**
  * Central manager for all SharedPreferences storage.
  * Stores folder URI, update interval, open-with preference,
- * cached file list, and per-widget current note URI.
+ * cached file list, per-widget state, quiet hours, custom colors, etc.
  */
 object PreferencesManager {
 
@@ -22,6 +22,22 @@ object PreferencesManager {
     // Open-with values
     const val OPEN_WITH_OBSIDIAN = "obsidian"
     const val OPEN_WITH_SYSTEM = "system"
+    const val OPEN_WITH_VIEWER = "viewer" // New: built-in viewer
+
+    // Theme values
+    const val THEME_DEFAULT = "default"
+    const val THEME_DARK = "dark"
+    const val THEME_TRANSPARENT = "transparent"
+    const val THEME_CUSTOM = "custom"
+
+    // Font size values
+    const val FONT_SIZE_SMALL = "small"
+    const val FONT_SIZE_MEDIUM = "medium"
+    const val FONT_SIZE_LARGE = "large"
+
+    // Tag logic
+    const val TAG_LOGIC_OR = "or"
+    const val TAG_LOGIC_AND = "and"
 
     // ── Folder URI ────────────────────────────────────────────────────────────
 
@@ -36,13 +52,11 @@ object PreferencesManager {
 
     // ── Update interval ───────────────────────────────────────────────────────
 
-    /** Returns the configured interval in minutes. Defaults to 60. Returns -1 for off. */
     fun getIntervalMinutes(context: Context): Int {
         val prefs = prefs(context)
         if (prefs.contains(KEY_INTERVAL_MINUTES)) {
             return prefs.getInt(KEY_INTERVAL_MINUTES, 60)
         }
-        // Fallback to legacy hours if exists
         if (prefs.contains(KEY_INTERVAL_HOURS)) {
             val hours = prefs.getInt(KEY_INTERVAL_HOURS, 1)
             val minutes = hours * 60
@@ -59,7 +73,7 @@ object PreferencesManager {
     // ── Open-with preference ──────────────────────────────────────────────────
 
     fun getOpenWith(context: Context): String {
-        return prefs(context).getString(KEY_OPEN_WITH, OPEN_WITH_SYSTEM) ?: OPEN_WITH_SYSTEM
+        return prefs(context).getString(KEY_OPEN_WITH, OPEN_WITH_VIEWER) ?: OPEN_WITH_VIEWER
     }
 
     fun setOpenWith(context: Context, value: String) {
@@ -67,10 +81,6 @@ object PreferencesManager {
     }
 
     // ── Widget Theme preference ───────────────────────────────────────────────
-
-    const val THEME_DEFAULT = "default"
-    const val THEME_DARK = "dark"
-    const val THEME_TRANSPARENT = "transparent"
 
     fun getWidgetTheme(context: Context): String {
         return prefs(context).getString("widget_theme", THEME_DEFAULT) ?: THEME_DEFAULT
@@ -80,11 +90,33 @@ object PreferencesManager {
         prefs(context).edit().putString("widget_theme", value).apply()
     }
 
-    // ── Font Size preference ──────────────────────────────────────────────────
+    // ── Custom widget colors ──────────────────────────────────────────────────
 
-    const val FONT_SIZE_SMALL = "small"
-    const val FONT_SIZE_MEDIUM = "medium"
-    const val FONT_SIZE_LARGE = "large"
+    fun getCustomWidgetBgColor(context: Context): Int {
+        return prefs(context).getInt("custom_widget_bg_color", 0xFF1E1B4B.toInt())
+    }
+
+    fun setCustomWidgetBgColor(context: Context, color: Int) {
+        prefs(context).edit().putInt("custom_widget_bg_color", color).apply()
+    }
+
+    fun getCustomWidgetTextColor(context: Context): Int {
+        return prefs(context).getInt("custom_widget_text_color", 0xFFF8FAFC.toInt())
+    }
+
+    fun setCustomWidgetTextColor(context: Context, color: Int) {
+        prefs(context).edit().putInt("custom_widget_text_color", color).apply()
+    }
+
+    fun getCustomWidgetTitleColor(context: Context): Int {
+        return prefs(context).getInt("custom_widget_title_color", 0xFFFFFFFF.toInt())
+    }
+
+    fun setCustomWidgetTitleColor(context: Context, color: Int) {
+        prefs(context).edit().putInt("custom_widget_title_color", color).apply()
+    }
+
+    // ── Font Size preference ──────────────────────────────────────────────────
 
     fun getFontSize(context: Context): String {
         return prefs(context).getString("widget_font_size", FONT_SIZE_MEDIUM) ?: FONT_SIZE_MEDIUM
@@ -94,7 +126,7 @@ object PreferencesManager {
         prefs(context).edit().putString("widget_font_size", value).apply()
     }
 
-    // ── Tag Filter preference ──────────────────────────────────────────────────
+    // ── Tag Filter preferences ────────────────────────────────────────────────
 
     fun getTagFilter(context: Context): String {
         return prefs(context).getString("tag_filter", "") ?: ""
@@ -102,6 +134,21 @@ object PreferencesManager {
 
     fun setTagFilter(context: Context, value: String) {
         prefs(context).edit().putString("tag_filter", value.trim()).apply()
+    }
+
+    /** Returns individual tags parsed from the tag filter string */
+    fun getTagList(context: Context): List<String> {
+        val raw = getTagFilter(context)
+        if (raw.isBlank()) return emptyList()
+        return raw.split(";", ",").map { it.trim() }.filter { it.isNotEmpty() }
+    }
+
+    fun getTagLogic(context: Context): String {
+        return prefs(context).getString("tag_logic", TAG_LOGIC_OR) ?: TAG_LOGIC_OR
+    }
+
+    fun setTagLogic(context: Context, value: String) {
+        prefs(context).edit().putString("tag_logic", value).apply()
     }
 
     // ── Folder Blacklist preference ───────────────────────────────────────────
@@ -120,21 +167,60 @@ object PreferencesManager {
         prefs(context).edit().putString("folder_blacklist", value).apply()
     }
 
-    // ── Cached file list (JSON Migration) ─────────────────────────────────────
+    // ── Quiet Hours ───────────────────────────────────────────────────────────
+
+    fun isQuietHoursEnabled(context: Context): Boolean {
+        return prefs(context).getBoolean("quiet_hours_enabled", false)
+    }
+
+    fun setQuietHoursEnabled(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean("quiet_hours_enabled", enabled).apply()
+    }
+
+    /** Quiet hours start in minutes from midnight (e.g. 23:00 = 1380) */
+    fun getQuietHoursStart(context: Context): Int {
+        return prefs(context).getInt("quiet_hours_start", 23 * 60) // default 23:00
+    }
+
+    fun setQuietHoursStart(context: Context, minutesFromMidnight: Int) {
+        prefs(context).edit().putInt("quiet_hours_start", minutesFromMidnight).apply()
+    }
+
+    /** Quiet hours end in minutes from midnight (e.g. 7:00 = 420) */
+    fun getQuietHoursEnd(context: Context): Int {
+        return prefs(context).getInt("quiet_hours_end", 7 * 60) // default 07:00
+    }
+
+    fun setQuietHoursEnd(context: Context, minutesFromMidnight: Int) {
+        prefs(context).edit().putInt("quiet_hours_end", minutesFromMidnight).apply()
+    }
+
+    fun isInQuietHours(context: Context): Boolean {
+        if (!isQuietHoursEnabled(context)) return false
+        val now = java.util.Calendar.getInstance()
+        val currentMinutes = now.get(java.util.Calendar.HOUR_OF_DAY) * 60 + now.get(java.util.Calendar.MINUTE)
+        val start = getQuietHoursStart(context)
+        val end = getQuietHoursEnd(context)
+        return if (start <= end) {
+            currentMinutes in start..end
+        } else {
+            // Wraps midnight, e.g. 23:00 - 07:00
+            currentMinutes >= start || currentMinutes <= end
+        }
+    }
+
+    // ── Cached file list (JSON) ───────────────────────────────────────────────
 
     private fun getCacheFile(context: Context): java.io.File {
         return java.io.File(context.filesDir, "md_notes_cache.json")
     }
 
-    /** Returns list of URI strings cached during last scan. */
     fun getCachedFileUris(context: Context): List<String> {
         val file = getCacheFile(context)
         if (!file.exists()) {
-            // Fallback to legacy shared prefs if json doesn't exist yet
             val raw = prefs(context).getString(KEY_FILES_CACHE, "") ?: ""
             if (raw.isNotEmpty()) {
                 val list = raw.split("\n").filter { it.isNotBlank() }
-                // migrate
                 setCachedFileUris(context, list)
                 prefs(context).edit().remove(KEY_FILES_CACHE).apply()
                 return list
@@ -145,17 +231,12 @@ object PreferencesManager {
         return try {
             val jsonStr = file.readText()
             val jsonArray = org.json.JSONArray(jsonStr)
-            val list = mutableListOf<String>()
-            for (i in 0 until jsonArray.length()) {
-                list.add(jsonArray.getString(i))
-            }
-            list
+            (0 until jsonArray.length()).map { jsonArray.getString(it) }
         } catch (e: Exception) {
             emptyList()
         }
     }
 
-    /** Saves a new list of URI strings to JSON cache. */
     fun setCachedFileUris(context: Context, uris: List<String>) {
         try {
             val jsonArray = org.json.JSONArray()
@@ -180,6 +261,52 @@ object PreferencesManager {
 
     fun clearWidgetNote(context: Context, widgetId: Int) {
         prefs(context).edit().remove("note_$widgetId").apply()
+    }
+
+    // ── Per-widget pinned state ───────────────────────────────────────────────
+
+    fun isNotePinned(context: Context, widgetId: Int): Boolean {
+        return prefs(context).getBoolean("pinned_$widgetId", false)
+    }
+
+    fun setNotePinned(context: Context, widgetId: Int, pinned: Boolean) {
+        prefs(context).edit().putBoolean("pinned_$widgetId", pinned).apply()
+    }
+
+    fun clearWidgetPinned(context: Context, widgetId: Int) {
+        prefs(context).edit().remove("pinned_$widgetId").apply()
+    }
+
+    // ── Note history ──────────────────────────────────────────────────────────
+
+    private const val MAX_HISTORY_SIZE = 50
+
+    fun getNoteHistory(context: Context): List<String> {
+        return try {
+            val historyFile = java.io.File(context.filesDir, "note_history.json")
+            if (!historyFile.exists()) return emptyList()
+            val jsonArray = org.json.JSONArray(historyFile.readText())
+            (0 until jsonArray.length()).map { jsonArray.getString(it) }
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    fun addToNoteHistory(context: Context, noteUri: String) {
+        try {
+            val history = getNoteHistory(context).toMutableList()
+            history.remove(noteUri) // Remove if already exists to avoid duplicates
+            history.add(0, noteUri) // Add to front
+            // Trim to max size
+            val trimmed = history.take(MAX_HISTORY_SIZE)
+            val jsonArray = org.json.JSONArray()
+            for (uri in trimmed) {
+                jsonArray.put(uri)
+            }
+            java.io.File(context.filesDir, "note_history.json").writeText(jsonArray.toString())
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     // ── Helper ────────────────────────────────────────────────────────────────

@@ -9,15 +9,13 @@ android {
 
     defaultConfig {
         applicationId = "com.mdnotes.widget"
-        minSdk = 36
+        minSdk = 31
         targetSdk = 36
-        versionCode = 3
-        versionName = "1.3"
+        versionCode = 4
+        versionName = "2.0"
     }
 
     signingConfigs {
-        // Reuse the built-in debug keystore for sideloading.
-        // For Play Store, generate a real keystore and use GitHub Secrets.
         getByName("debug") {
             storeFile = file("${System.getProperty("user.home")}/.android/debug.keystore")
             storePassword = "android"
@@ -28,7 +26,7 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false   // disabled — R8 can break widgets without careful keep rules
+            isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -51,6 +49,7 @@ android {
 
     buildFeatures {
         buildConfig = true
+        viewBinding = true
     }
 }
 
@@ -59,5 +58,13 @@ dependencies {
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("com.google.android.material:material:1.12.0")
     implementation("androidx.documentfile:documentfile:1.0.1")
-    implementation("androidx.constraintlayout:constraintlayout:2.2.1")
+
+    // Coroutines
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+
+    // Lifecycle (for lifecycleScope)
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
+
+    // ViewPager2 for swipe in NoteViewer
+    implementation("androidx.viewpager2:viewpager2:1.1.0")
 }

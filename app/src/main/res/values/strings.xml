@@ -17,27 +17,33 @@
     <string name="interval_settings">Интервал обновления</string>
     <string name="open_with_settings">Открывать в</string>
     <string name="theme_settings">Стиль виджета</string>
-    <string name="theme_default">Фиолетовый (Оригинальный)</string>
-    <string name="theme_dark">Темный (Dark)</string>
-    <string name="theme_transparent">Полупрозрачный</string>
-    
+    <string name="theme_default">Фиолетовый</string>
+    <string name="theme_dark">Тёмный</string>
+    <string name="theme_transparent">Прозрачный</string>
+    <string name="theme_custom">Свои цвета</string>
+
     <string name="font_settings">Размер шрифта</string>
     <string name="font_small">Мелкий</string>
     <string name="font_medium">Средний</string>
     <string name="font_large">Крупный</string>
 
+    <!-- Tag filter -->
     <string name="tag_settings">Фильтр по тегам</string>
-    <string name="tag_hint">Пример: #quotes</string>
-    <string name="tag_desc">Фильтр для случайных заметок. Оставьте пустым, чтобы отключить.</string>
+    <string name="tag_hint">Например: #quotes; #daily</string>
+    <string name="tag_desc">Несколько тегов через ; или ,</string>
+    <string name="tag_logic_label">Логика фильтрации</string>
+    <string name="tag_logic_or">Любой тег (ИЛИ)</string>
+    <string name="tag_logic_and">Все теги (И)</string>
 
-    <string name="blacklist_settings">Черный список папок</string>
+    <string name="blacklist_settings">Чёрный список папок</string>
     <string name="blacklist_hint">через ; : Templates; Archive</string>
-    
+
     <string name="interval_off">Выкл</string>
     <string name="interval_30m">30 мин</string>
-    
-    <string name="author_credit">Made by aristocrat\n@slamtgk</string>
+    <string name="interval_max">24 ч</string>
 
+    <string name="app_version">v2.0</string>
+    <string name="author_credit">MD Notes Widget v2.0\nMade by aristocrat \u2022 @slamtgk</string>
     <string name="actions_section">Управление</string>
 
     <!-- Folder -->
@@ -48,14 +54,51 @@
     <!-- Open with -->
     <string name="open_with">Открыть заметку</string>
     <string name="obsidian">Obsidian</string>
-    <string name="system_chooser">Выбор приложения</string>
-    <string name="obsidian_not_installed">Obsidian не найден, выбор приложения…</string>
+    <string name="system_chooser">Другое приложение</string>
+    <string name="built_in_viewer">Встроенный просмотр</string>
+    <string name="obsidian_not_installed">Obsidian не найден, открываю выбор…</string>
 
     <!-- Actions -->
     <string name="refresh_all_widgets">Обновить все виджеты</string>
-    <string name="refresh_file_list">Обновить список файлов</string>
+    <string name="refresh_file_list">Пересканировать файлы</string>
     <string name="widget_updated">Виджеты обновлены</string>
     <string name="files_refreshed">Найдено файлов: %d</string>
     <string name="error_opening_file">Не удалось открыть файл</string>
     <string name="refresh">Обновить</string>
+
+    <!-- Widget meta -->
+    <string name="folder_label">Папка: %s</string>
+
+    <!-- Quiet Hours -->
+    <string name="quiet_hours_settings">Тихие часы</string>
+    <string name="quiet_hours_desc">Виджет не обновляется в указанное время</string>
+    <string name="quiet_hours_from">С</string>
+    <string name="quiet_hours_to">До</string>
+    <string name="quiet_hours_enabled">Включить тихие часы</string>
+
+    <!-- Custom colors -->
+    <string name="custom_colors_settings">Настройка цветов</string>
+    <string name="custom_bg_color">Цвет фона</string>
+    <string name="custom_text_color">Цвет текста</string>
+    <string name="custom_title_color">Цвет заголовка</string>
+    <string name="pick_color">Выбрать цвет</string>
+
+    <!-- Note Viewer -->
+    <string name="history">История</string>
+    <string name="no_history">История пуста</string>
+    <string name="open_external">Открыть в…</string>
+    <string name="pin_note">Закрепить</string>
+    <string name="unpin_note">Открепить</string>
+    <string name="swipe_hint">Свайпните для следующей заметки</string>
+    <string name="note_images">Изображения</string>
+
+    <!-- Pin -->
+    <string name="note_pinned">Заметка закреплена</string>
+    <string name="note_unpinned">Заметка откреплена</string>
+
+    <!-- SAF -->
+    <string name="saf_permission_lost">Доступ к папке утерян. Выберите заново.</string>
+
+    <!-- List widget -->
+    <string name="widget_list_description">Список заметок с пролистыванием</string>
 </resources>

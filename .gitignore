@@ -45,3 +45,7 @@ google-services.json
 
 # Explicitly keep gradle.properties (contains android.useAndroidX=true etc.)
 !gradle.properties
+
+# Debug logs
+logcat*.log
+*.am.log

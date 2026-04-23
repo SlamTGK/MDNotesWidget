@@ -1,16 +1,20 @@
-# Add project specific ProGuard rules here.
+# MDNotesWidget ProGuard rules
+
+# Keep all widget-related classes
 -keep class com.mdnotes.widget.** { *; }
 -keepclassmembers class com.mdnotes.widget.** { *; }
-
-# WorkManager
--keep class * extends androidx.work.Worker
--keep class * extends androidx.work.ListenableWorker {
-    public <init>(android.content.Context,androidx.work.WorkerParameters);
-}
 
 # AppWidgetProvider
 -keep class * extends android.appwidget.AppWidgetProvider
 
+# RemoteViewsService for list widget
+-keep class * extends android.widget.RemoteViewsService
+
 # Kotlin
 -keep class kotlin.** { *; }
 -dontwarn kotlin.**
+
+# Coroutines
+-keepnames class kotlinx.coroutines.internal.MainDispatcherFactory {}
+-keepnames class kotlinx.coroutines.CoroutineExceptionHandler {}
+-keepclassmembers class kotlinx.coroutines.** { volatile <fields>; }

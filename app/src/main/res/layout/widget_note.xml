@@ -6,7 +6,7 @@
     android:padding="0dp"
     android:background="@drawable/widget_bg_default">
 
-    <!-- Top row: Title + Refresh Button -->
+    <!-- Top row: Title + Pin + Refresh -->
     <LinearLayout
         android:id="@+id/top_bar"
         android:layout_width="match_parent"
@@ -15,8 +15,8 @@
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:paddingStart="14dp"
-        android:paddingEnd="6dp"
-        android:paddingTop="12dp"
+        android:paddingEnd="4dp"
+        android:paddingTop="10dp"
         android:paddingBottom="4dp">
 
         <LinearLayout
@@ -46,13 +46,24 @@
                 android:ellipsize="end" />
         </LinearLayout>
 
+        <!-- Pin button -->
+        <ImageView
+            android:id="@+id/widget_pin_btn"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:src="@drawable/ic_pin_outline"
+            android:padding="4dp"
+            android:layout_marginEnd="2dp"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/pin_note" />
+
+        <!-- Refresh button -->
         <ImageView
             android:id="@+id/widget_refresh_btn"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
             android:src="@drawable/ic_refresh"
-            android:padding="6dp"
-            android:layout_marginStart="4dp"
+            android:padding="4dp"
             android:background="?android:attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/refresh" />
 
@@ -68,7 +79,7 @@
         android:layout_marginEnd="14dp"
         android:background="@color/widget_divider" />
 
-    <!-- Note content — takes full remaining space, auto ellipsizes at the precise bottom -->
+    <!-- Note content -->
     <TextView
         android:id="@+id/widget_content"
         android:layout_width="match_parent"

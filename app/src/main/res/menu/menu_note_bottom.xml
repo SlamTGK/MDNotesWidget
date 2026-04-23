@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:id="@+id/nav_random"
+        android:icon="@drawable/ic_refresh"
+        android:title="@string/refresh" />
+
+    <item
+        android:id="@+id/nav_history"
+        android:icon="@drawable/ic_history"
+        android:title="@string/history" />
+
+    <item
+        android:id="@+id/nav_open"
+        android:icon="@drawable/ic_open_external"
+        android:title="@string/open_external" />
+</menu>

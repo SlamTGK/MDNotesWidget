@@ -5,7 +5,6 @@ on:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
-  # Allow manual trigger from GitHub Actions UI
   workflow_dispatch:
 
 jobs:
@@ -25,21 +24,23 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
+      # ── Android SDK ─────────────────────────────────────────────────────────
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK components
+        run: |
+          sdkmanager --install \
+            "platforms;android-36" \
+            "build-tools;36.0.0" \
+            "platform-tools"
+
       # ── Gradle ──────────────────────────────────────────────────────────────
-      # Uses setup-gradle to install Gradle 8.11 without needing a pre-built wrapper JAR
-      - name: Setup Gradle 8.11
+      # Uses setup-gradle to install Gradle without needing a wrapper JAR in the repo
+      - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.11.1'
-
-      # ── Android SDK ─────────────────────────────────────────────────────────
-      # ubuntu-latest already has Android SDK; install API 36 build tools if missing
-      - name: Install Android SDK components
-        run: |
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
-            "platforms;android-36" \
-            "build-tools;36.0.0" \
-            --sdk_root=$ANDROID_HOME || true
 
       # ── Cache ───────────────────────────────────────────────────────────────
       - name: Cache Gradle packages
@@ -48,10 +49,11 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: gradle-${{ hashFiles('**/*.gradle.kts', '**/gradle-wrapper.properties', '**/gradle.properties') }}
-          restore-keys: gradle-
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle.kts', '**/gradle-wrapper.properties', '**/gradle.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
 
-      # ── Generate debug keystore (consistent signing across CI runs) ────────────
+      # ── Generate debug keystore ─────────────────────────────────────────────
       - name: Create debug keystore
         run: |
           mkdir -p $HOME/.android
@@ -69,29 +71,49 @@ jobs:
       - name: Build Debug APK
         run: gradle assembleDebug --stacktrace --no-configuration-cache
 
-      - name: Build Release APK (signed with debug key)
+      - name: Build Release APK
         run: gradle assembleRelease --stacktrace --no-configuration-cache
 
       # ── Upload artifacts ────────────────────────────────────────────────────
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: MDNotesWidget-debug
+          name: MDNotesWidget-v2.0-debug
           path: app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
 
       - name: Upload Release APK
         uses: actions/upload-artifact@v4
         with:
-          name: MDNotesWidget-release
+          name: MDNotesWidget-v2.0-release
           path: app/build/outputs/apk/release/app-release*.apk
           retention-days: 30
 
-      # ── Optional: Create GitHub Release on tag push ─────────────────────────
+      # ── Create GitHub Release on tag push ───────────────────────────────────
       - name: Create Release (on version tag)
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
+          name: "MD Notes Widget ${{ github.ref_name }}"
+          body: |
+            ## MD Notes Widget ${{ github.ref_name }}
+
+            ### Download
+            - **app-release.apk** — Release build (minified, signed with debug key)
+            - **app-debug.apk** — Debug build
+
+            ### What's New in v2.0
+            - Full-screen note viewer with swipe navigation
+            - Pin notes to widget
+            - List widget (StackView) with swipeable cards
+            - Material You / Monet dynamic colors
+            - Custom widget colors
+            - Quiet hours
+            - Multiple tags with AND/OR logic
+            - Note history (last 50 notes)
+            - Russian + English localization
+            - Built-in note viewer
+            - Performance optimizations & bug fixes
           files: |
             app/build/outputs/apk/debug/app-debug.apk
             app/build/outputs/apk/release/app-release*.apk

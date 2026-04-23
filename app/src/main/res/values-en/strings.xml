@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">MD Notes Widget</string>
+    <string name="widget_description">Displays random Markdown notes from a selected folder</string>
+
+    <!-- Widget states -->
+    <string name="tap_to_configure">Tap to configure</string>
+    <string name="configure_hint">Select a folder with .md files</string>
+    <string name="no_notes_found">No notes found</string>
+    <string name="no_notes_hint">No .md files in the selected folder</string>
+    <string name="no_folder_selected">No folder selected</string>
+
+    <!-- Settings screen -->
+    <string name="settings">Settings</string>
+    <string name="settings_subtitle">Customize your widget</string>
+    <string name="folder_settings">Notes Folder</string>
+    <string name="interval_settings">Update Interval</string>
+    <string name="open_with_settings">Open With</string>
+    <string name="theme_settings">Widget Theme</string>
+    <string name="theme_default">Purple</string>
+    <string name="theme_dark">Dark</string>
+    <string name="theme_transparent">Transparent</string>
+    <string name="theme_custom">Custom Colors</string>
+
+    <string name="font_settings">Font Size</string>
+    <string name="font_small">Small</string>
+    <string name="font_medium">Medium</string>
+    <string name="font_large">Large</string>
+
+    <!-- Tag filter -->
+    <string name="tag_settings">Tag Filter</string>
+    <string name="tag_hint">e.g. #quotes; #daily</string>
+    <string name="tag_desc">Multiple tags separated by ; or ,</string>
+    <string name="tag_logic_label">Filter Logic</string>
+    <string name="tag_logic_or">Any tag (OR)</string>
+    <string name="tag_logic_and">All tags (AND)</string>
+
+    <string name="blacklist_settings">Folder Blacklist</string>
+    <string name="blacklist_hint">separated by ; : Templates; Archive</string>
+
+    <string name="interval_off">Off</string>
+    <string name="interval_30m">30 min</string>
+    <string name="interval_max">24 h</string>
+
+    <string name="app_version">v2.0</string>
+    <string name="author_credit">MD Notes Widget v2.0\nMade by aristocrat \u2022 @slamtgk</string>
+    <string name="actions_section">Actions</string>
+
+    <!-- Folder -->
+    <string name="select_folder">Select Folder</string>
+    <string name="folder_path_hint">No folder selected</string>
+    <string name="file_count">%d files found</string>
+
+    <!-- Open with -->
+    <string name="open_with">Open note</string>
+    <string name="obsidian">Obsidian</string>
+    <string name="system_chooser">Other app</string>
+    <string name="built_in_viewer">Built-in viewer</string>
+    <string name="obsidian_not_installed">Obsidian not found, opening chooser…</string>
+
+    <!-- Actions -->
+    <string name="refresh_all_widgets">Refresh All Widgets</string>
+    <string name="refresh_file_list">Rescan Files</string>
+    <string name="widget_updated">Widgets updated</string>
+    <string name="files_refreshed">Files found: %d</string>
+    <string name="error_opening_file">Could not open file</string>
+    <string name="refresh">Refresh</string>
+
+    <!-- Widget meta -->
+    <string name="folder_label">Folder: %s</string>
+
+    <!-- Quiet Hours -->
+    <string name="quiet_hours_settings">Quiet Hours</string>
+    <string name="quiet_hours_desc">Widget won\'t update during this time</string>
+    <string name="quiet_hours_from">From</string>
+    <string name="quiet_hours_to">To</string>
+    <string name="quiet_hours_enabled">Enable quiet hours</string>
+
+    <!-- Custom colors -->
+    <string name="custom_colors_settings">Color Settings</string>
+    <string name="custom_bg_color">Background color</string>
+    <string name="custom_text_color">Text color</string>
+    <string name="custom_title_color">Title color</string>
+    <string name="pick_color">Pick color</string>
+
+    <!-- Note Viewer -->
+    <string name="history">History</string>
+    <string name="no_history">History is empty</string>
+    <string name="open_external">Open in…</string>
+    <string name="pin_note">Pin</string>
+    <string name="unpin_note">Unpin</string>
+    <string name="swipe_hint">Swipe for next note</string>
+    <string name="note_images">Images</string>
+
+    <!-- Pin -->
+    <string name="note_pinned">Note pinned</string>
+    <string name="note_unpinned">Note unpinned</string>
+
+    <!-- SAF -->
+    <string name="saf_permission_lost">Folder access lost. Please select again.</string>
+
+    <!-- List widget -->
+    <string name="widget_list_description">Note list with swipe navigation</string>
+</resources>

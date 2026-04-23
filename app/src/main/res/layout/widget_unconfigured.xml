@@ -12,7 +12,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/tap_to_configure"
-        android:textColor="#FFFFFF"
+        android:textColor="@color/widget_text_title"
         android:textSize="14sp"
         android:textStyle="bold"
         android:gravity="center" />
@@ -22,7 +22,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="6dp"
         android:text="@string/configure_hint"
-        android:textColor="#80FFFFFF"
+        android:textColor="@color/widget_text_content"
         android:textSize="11sp"
         android:gravity="center" />
 

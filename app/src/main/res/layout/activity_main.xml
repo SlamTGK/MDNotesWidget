@@ -1,13 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-    Settings / configuration screen.
-    Dark Material3 design with card-based sections.
--->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bg_dark"
+    android:background="?android:colorBackground"
     android:fillViewport="true">
 
     <LinearLayout
@@ -27,7 +23,6 @@
             android:paddingTop="32dp"
             android:paddingBottom="24dp">
 
-            <!-- App icon -->
             <ImageView
                 android:layout_width="72dp"
                 android:layout_height="72dp"
@@ -36,26 +31,23 @@
                 android:contentDescription="@string/app_name"
                 android:padding="8dp" />
 
-            <!-- App title -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="14dp"
                 android:text="@string/app_name"
-                android:textColor="@color/text_primary"
+                android:textColor="?colorOnSurface"
                 android:textSize="22sp"
                 android:textStyle="bold"
                 android:fontFamily="sans-serif-medium" />
 
-            <!-- Subtitle -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:text="@string/settings_subtitle"
-                android:textColor="@color/text_secondary"
+                android:textColor="?colorOnSurfaceVariant"
                 android:textSize="13sp" />
-
         </LinearLayout>
 
         <!-- ── Card: Folder ───────────────────────────────────────────── -->
@@ -63,11 +55,10 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="12dp"
-            app:cardBackgroundColor="@color/surface_dark"
+            app:cardBackgroundColor="?colorSurfaceVariant"
             app:cardCornerRadius="16dp"
             app:cardElevation="0dp"
-            app:strokeColor="@color/surface_card_border"
-            app:strokeWidth="1dp">
+            app:strokeWidth="0dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -75,50 +66,43 @@
                 android:orientation="vertical"
                 android:padding="18dp">
 
-                <!-- Section label -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/folder_settings"
-                    android:textColor="@color/primary_light"
+                    android:textColor="?colorPrimary"
                     android:textSize="11sp"
                     android:textAllCaps="true"
                     android:letterSpacing="0.08"
                     android:textStyle="bold" />
 
-                <!-- Current folder path -->
                 <TextView
                     android:id="@+id/tv_folder_path"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="10dp"
                     android:text="@string/folder_path_hint"
-                    android:textColor="@color/text_primary"
+                    android:textColor="?colorOnSurface"
                     android:textSize="13sp"
                     android:maxLines="2"
                     android:ellipsize="middle"
                     android:fontFamily="monospace" />
 
-                <!-- File count badge -->
                 <TextView
                     android:id="@+id/tv_file_count"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:textColor="@color/secondary"
+                    android:textColor="?colorSecondary"
                     android:textSize="11sp" />
 
-                <!-- Select folder button -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_select_folder"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="14dp"
                     android:text="@string/select_folder"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
-                    app:strokeColor="@color/primary"
-                    android:textColor="@color/primary_light" />
-
+                    style="@style/Widget.Material3.Button.TonalButton" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -127,11 +111,10 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="12dp"
-            app:cardBackgroundColor="@color/surface_dark"
+            app:cardBackgroundColor="?colorSurfaceVariant"
             app:cardCornerRadius="16dp"
             app:cardElevation="0dp"
-            app:strokeColor="@color/surface_card_border"
-            app:strokeWidth="1dp">
+            app:strokeWidth="0dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -139,7 +122,6 @@
                 android:orientation="vertical"
                 android:padding="18dp">
 
-                <!-- Section label + current value -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -151,7 +133,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="@string/interval_settings"
-                        android:textColor="@color/primary_light"
+                        android:textColor="?colorPrimary"
                         android:textSize="11sp"
                         android:textAllCaps="true"
                         android:letterSpacing="0.08"
@@ -161,24 +143,21 @@
                         android:id="@+id/tv_interval_value"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:textColor="@color/text_primary"
+                        android:textColor="?colorOnSurface"
                         android:textSize="20sp"
                         android:textStyle="bold" />
-
                 </LinearLayout>
 
-                <!-- Slider (1—24 hours) -->
                 <SeekBar
                     android:id="@+id/seekbar_interval"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="14dp"
-                    android:max="23"
+                    android:max="25"
                     android:progress="0"
-                    android:progressTint="@color/primary"
-                    android:thumbTint="@color/primary_light" />
+                    android:progressTint="?colorPrimary"
+                    android:thumbTint="?colorPrimary" />
 
-                <!-- Min / max labels -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -189,17 +168,16 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Выкл"
-                        android:textColor="@color/text_hint"
+                        android:text="@string/interval_off"
+                        android:textColor="?colorOnSurfaceVariant"
                         android:textSize="11sp" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="24 ч"
-                        android:textColor="@color/text_hint"
+                        android:text="@string/interval_max"
+                        android:textColor="?colorOnSurfaceVariant"
                         android:textSize="11sp" />
-
                 </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -209,11 +187,10 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="12dp"
-            app:cardBackgroundColor="@color/surface_dark"
+            app:cardBackgroundColor="?colorSurfaceVariant"
             app:cardCornerRadius="16dp"
             app:cardElevation="0dp"
-            app:strokeColor="@color/surface_card_border"
-            app:strokeWidth="1dp">
+            app:strokeWidth="0dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -225,7 +202,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/open_with_settings"
-                    android:textColor="@color/primary_light"
+                    android:textColor="?colorPrimary"
                     android:textSize="11sp"
                     android:textAllCaps="true"
                     android:letterSpacing="0.08"
@@ -238,14 +215,25 @@
                     android:layout_marginTop="12dp">
 
                     <RadioButton
+                        android:id="@+id/radio_viewer"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:gravity="center_vertical"
+                        android:text="@string/built_in_viewer"
+                        android:textColor="?colorOnSurface"
+                        android:textSize="14sp"
+                        android:buttonTint="?colorPrimary"
+                        android:checked="true" />
+
+                    <RadioButton
                         android:id="@+id/radio_obsidian"
                         android:layout_width="match_parent"
                         android:layout_height="48dp"
                         android:gravity="center_vertical"
                         android:text="@string/obsidian"
-                        android:textColor="@color/text_primary"
+                        android:textColor="?colorOnSurface"
                         android:textSize="14sp"
-                        android:buttonTint="@color/primary" />
+                        android:buttonTint="?colorPrimary" />
 
                     <RadioButton
                         android:id="@+id/radio_system"
@@ -253,11 +241,9 @@
                         android:layout_height="48dp"
                         android:gravity="center_vertical"
                         android:text="@string/system_chooser"
-                        android:textColor="@color/text_primary"
+                        android:textColor="?colorOnSurface"
                         android:textSize="14sp"
-                        android:buttonTint="@color/primary"
-                        android:checked="true" />
-
+                        android:buttonTint="?colorPrimary" />
                 </RadioGroup>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -267,11 +253,10 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="12dp"
-            app:cardBackgroundColor="@color/surface_dark"
+            app:cardBackgroundColor="?colorSurfaceVariant"
             app:cardCornerRadius="16dp"
             app:cardElevation="0dp"
-            app:strokeColor="@color/surface_card_border"
-            app:strokeWidth="1dp">
+            app:strokeWidth="0dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -283,7 +268,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/theme_settings"
-                    android:textColor="@color/primary_light"
+                    android:textColor="?colorPrimary"
                     android:textSize="11sp"
                     android:textAllCaps="true"
                     android:letterSpacing="0.08"
@@ -298,47 +283,160 @@
                     <RadioButton
                         android:id="@+id/radio_theme_default"
                         android:layout_width="match_parent"
-                        android:layout_height="48dp"
+                        android:layout_height="44dp"
                         android:gravity="center_vertical"
                         android:text="@string/theme_default"
-                        android:textColor="@color/text_primary"
+                        android:textColor="?colorOnSurface"
                         android:textSize="14sp"
-                        android:buttonTint="@color/primary" />
+                        android:buttonTint="?colorPrimary" />
 
                     <RadioButton
                         android:id="@+id/radio_theme_dark"
                         android:layout_width="match_parent"
-                        android:layout_height="48dp"
+                        android:layout_height="44dp"
                         android:gravity="center_vertical"
                         android:text="@string/theme_dark"
-                        android:textColor="@color/text_primary"
+                        android:textColor="?colorOnSurface"
                         android:textSize="14sp"
-                        android:buttonTint="@color/primary" />
+                        android:buttonTint="?colorPrimary" />
 
                     <RadioButton
                         android:id="@+id/radio_theme_transparent"
                         android:layout_width="match_parent"
-                        android:layout_height="48dp"
+                        android:layout_height="44dp"
                         android:gravity="center_vertical"
                         android:text="@string/theme_transparent"
-                        android:textColor="@color/text_primary"
+                        android:textColor="?colorOnSurface"
                         android:textSize="14sp"
-                        android:buttonTint="@color/primary" />
+                        android:buttonTint="?colorPrimary" />
 
+                    <RadioButton
+                        android:id="@+id/radio_theme_custom"
+                        android:layout_width="match_parent"
+                        android:layout_height="44dp"
+                        android:gravity="center_vertical"
+                        android:text="@string/theme_custom"
+                        android:textColor="?colorOnSurface"
+                        android:textSize="14sp"
+                        android:buttonTint="?colorPrimary" />
                 </RadioGroup>
+
+                <!-- Custom colors panel (shown when custom theme is selected) -->
+                <LinearLayout
+                    android:id="@+id/custom_colors_panel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone"
+                    android:layout_marginTop="12dp">
+
+                    <!-- Background color -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="8dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/custom_bg_color"
+                            android:textColor="?colorOnSurface"
+                            android:textSize="13sp" />
+
+                        <View
+                            android:id="@+id/color_preview_bg"
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:background="#1E1B4B" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_pick_bg_color"
+                            android:layout_width="wrap_content"
+                            android:layout_height="36dp"
+                            android:layout_marginStart="8dp"
+                            android:text="@string/pick_color"
+                            android:textSize="11sp"
+                            style="@style/Widget.Material3.Button.TonalButton" />
+                    </LinearLayout>
+
+                    <!-- Text color -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="8dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/custom_text_color"
+                            android:textColor="?colorOnSurface"
+                            android:textSize="13sp" />
+
+                        <View
+                            android:id="@+id/color_preview_text"
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:background="#F8FAFC" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_pick_text_color"
+                            android:layout_width="wrap_content"
+                            android:layout_height="36dp"
+                            android:layout_marginStart="8dp"
+                            android:text="@string/pick_color"
+                            android:textSize="11sp"
+                            style="@style/Widget.Material3.Button.TonalButton" />
+                    </LinearLayout>
+
+                    <!-- Title color -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/custom_title_color"
+                            android:textColor="?colorOnSurface"
+                            android:textSize="13sp" />
+
+                        <View
+                            android:id="@+id/color_preview_title"
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:background="#FFFFFF" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_pick_title_color"
+                            android:layout_width="wrap_content"
+                            android:layout_height="36dp"
+                            android:layout_marginStart="8dp"
+                            android:text="@string/pick_color"
+                            android:textSize="11sp"
+                            style="@style/Widget.Material3.Button.TonalButton" />
+                    </LinearLayout>
+                </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- ── Card: Widget Font Size ─────────────────────────────────── -->
+        <!-- ── Card: Font Size ────────────────────────────────────────── -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="12dp"
-            app:cardBackgroundColor="@color/surface_dark"
+            app:cardBackgroundColor="?colorSurfaceVariant"
             app:cardCornerRadius="16dp"
             app:cardElevation="0dp"
-            app:strokeColor="@color/surface_card_border"
-            app:strokeWidth="1dp">
+            app:strokeWidth="0dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -350,7 +448,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/font_settings"
-                    android:textColor="@color/primary_light"
+                    android:textColor="?colorPrimary"
                     android:textSize="11sp"
                     android:textAllCaps="true"
                     android:letterSpacing="0.08"
@@ -369,9 +467,9 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="@string/font_small"
-                        android:textColor="@color/text_primary"
+                        android:textColor="?colorOnSurface"
                         android:textSize="12sp"
-                        android:buttonTint="@color/primary" />
+                        android:buttonTint="?colorPrimary" />
 
                     <RadioButton
                         android:id="@+id/radio_font_medium"
@@ -379,9 +477,9 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="@string/font_medium"
-                        android:textColor="@color/text_primary"
+                        android:textColor="?colorOnSurface"
                         android:textSize="14sp"
-                        android:buttonTint="@color/primary" />
+                        android:buttonTint="?colorPrimary" />
 
                     <RadioButton
                         android:id="@+id/radio_font_large"
@@ -389,24 +487,22 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="@string/font_large"
-                        android:textColor="@color/text_primary"
+                        android:textColor="?colorOnSurface"
                         android:textSize="16sp"
-                        android:buttonTint="@color/primary" />
-
+                        android:buttonTint="?colorPrimary" />
                 </RadioGroup>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- ── Card: Advanced Filtering ───────────────────────────────── -->
+        <!-- ── Card: Tag Filter + Logic ───────────────────────────────── -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="12dp"
-            app:cardBackgroundColor="@color/surface_dark"
+            app:cardBackgroundColor="?colorSurfaceVariant"
             app:cardCornerRadius="16dp"
             app:cardElevation="0dp"
-            app:strokeColor="@color/surface_card_border"
-            app:strokeWidth="1dp">
+            app:strokeWidth="0dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -418,7 +514,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/tag_settings"
-                    android:textColor="@color/primary_light"
+                    android:textColor="?colorPrimary"
                     android:textSize="11sp"
                     android:textAllCaps="true"
                     android:letterSpacing="0.08"
@@ -430,7 +526,7 @@
                     android:layout_marginTop="4dp"
                     android:layout_marginBottom="8dp"
                     android:text="@string/tag_desc"
-                    android:textColor="@color/text_secondary"
+                    android:textColor="?colorOnSurfaceVariant"
                     android:textSize="11sp" />
 
                 <EditText
@@ -439,17 +535,59 @@
                     android:layout_height="wrap_content"
                     android:hint="@string/tag_hint"
                     android:inputType="text"
-                    android:textColor="@color/text_primary"
-                    android:textColorHint="@color/text_hint"
+                    android:textColor="?colorOnSurface"
+                    android:textColorHint="?colorOnSurfaceVariant"
                     android:textSize="14sp"
-                    android:paddingBottom="12dp"/>
+                    android:paddingBottom="12dp" />
 
+                <!-- Tag logic: AND / OR -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/tag_logic_label"
+                    android:textColor="?colorPrimary"
+                    android:textSize="11sp"
+                    android:textAllCaps="true"
+                    android:letterSpacing="0.08"
+                    android:textStyle="bold" />
+
+                <RadioGroup
+                    android:id="@+id/radio_group_tag_logic"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginTop="8dp">
+
+                    <RadioButton
+                        android:id="@+id/radio_tag_or"
+                        android:layout_width="0dp"
+                        android:layout_height="40dp"
+                        android:layout_weight="1"
+                        android:text="@string/tag_logic_or"
+                        android:textColor="?colorOnSurface"
+                        android:textSize="13sp"
+                        android:buttonTint="?colorPrimary"
+                        android:checked="true" />
+
+                    <RadioButton
+                        android:id="@+id/radio_tag_and"
+                        android:layout_width="0dp"
+                        android:layout_height="40dp"
+                        android:layout_weight="1"
+                        android:text="@string/tag_logic_and"
+                        android:textColor="?colorOnSurface"
+                        android:textSize="13sp"
+                        android:buttonTint="?colorPrimary" />
+                </RadioGroup>
+
+                <!-- Folder blacklist -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
                     android:text="@string/blacklist_settings"
-                    android:textColor="@color/primary_light"
+                    android:textColor="?colorPrimary"
                     android:textSize="11sp"
                     android:textAllCaps="true"
                     android:letterSpacing="0.08"
@@ -462,11 +600,98 @@
                     android:layout_marginTop="8dp"
                     android:hint="@string/blacklist_hint"
                     android:inputType="text"
-                    android:textColor="@color/text_primary"
-                    android:textColorHint="@color/text_hint"
+                    android:textColor="?colorOnSurface"
+                    android:textColorHint="?colorOnSurfaceVariant"
                     android:textSize="14sp"
-                    android:paddingBottom="12dp"/>
+                    android:paddingBottom="12dp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
+        <!-- ── Card: Quiet Hours ──────────────────────────────────────── -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            app:cardBackgroundColor="?colorSurfaceVariant"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="0dp"
+            app:strokeWidth="0dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="18dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/quiet_hours_settings"
+                    android:textColor="?colorPrimary"
+                    android:textSize="11sp"
+                    android:textAllCaps="true"
+                    android:letterSpacing="0.08"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="@string/quiet_hours_desc"
+                    android:textColor="?colorOnSurfaceVariant"
+                    android:textSize="11sp" />
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switch_quiet_hours"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:text="@string/quiet_hours_enabled"
+                    android:textColor="?colorOnSurface"
+                    android:textSize="14sp"
+                    android:layout_marginTop="8dp" />
+
+                <LinearLayout
+                    android:id="@+id/quiet_hours_time_panel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginTop="8dp"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/quiet_hours_from"
+                        android:textColor="?colorOnSurface"
+                        android:textSize="14sp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_quiet_start"
+                        android:layout_width="wrap_content"
+                        android:layout_height="40dp"
+                        android:layout_marginStart="8dp"
+                        android:text="23:00"
+                        android:textSize="14sp"
+                        style="@style/Widget.Material3.Button.TonalButton" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="16dp"
+                        android:text="@string/quiet_hours_to"
+                        android:textColor="?colorOnSurface"
+                        android:textSize="14sp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_quiet_end"
+                        android:layout_width="wrap_content"
+                        android:layout_height="40dp"
+                        android:layout_marginStart="8dp"
+                        android:text="07:00"
+                        android:textSize="14sp"
+                        style="@style/Widget.Material3.Button.TonalButton" />
+                </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -475,11 +700,10 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="8dp"
-            app:cardBackgroundColor="@color/surface_dark"
+            app:cardBackgroundColor="?colorSurfaceVariant"
             app:cardCornerRadius="16dp"
             app:cardElevation="0dp"
-            app:strokeColor="@color/surface_card_border"
-            app:strokeWidth="1dp">
+            app:strokeWidth="0dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -491,14 +715,13 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/actions_section"
-                    android:textColor="@color/primary_light"
+                    android:textColor="?colorPrimary"
                     android:textSize="11sp"
                     android:textAllCaps="true"
                     android:letterSpacing="0.08"
                     android:textStyle="bold"
                     android:layout_marginBottom="14dp" />
 
-                <!-- Primary action: refresh widgets -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_refresh_widgets"
                     android:layout_width="match_parent"
@@ -506,21 +729,16 @@
                     android:text="@string/refresh_all_widgets"
                     android:textSize="14sp"
                     android:layout_marginBottom="10dp"
-                    app:cornerRadius="12dp"
-                    app:backgroundTint="@color/primary" />
+                    app:cornerRadius="12dp" />
 
-                <!-- Secondary action: rescan files -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_refresh_files"
                     android:layout_width="match_parent"
                     android:layout_height="52dp"
                     android:text="@string/refresh_file_list"
                     android:textSize="14sp"
-                    android:textColor="@color/primary_light"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
-                    app:strokeColor="@color/primary"
+                    style="@style/Widget.Material3.Button.TonalButton"
                     app:cornerRadius="12dp" />
-
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -532,10 +750,10 @@
             android:layout_marginTop="8dp"
             android:layout_marginBottom="16dp"
             android:text="@string/author_credit"
-            android:textColor="@color/text_hint"
+            android:textColor="?colorOnSurfaceVariant"
             android:textSize="11sp"
             android:gravity="center"
-            android:lineSpacingMultiplier="1.2"/>
+            android:lineSpacingMultiplier="1.2" />
 
     </LinearLayout>
 </ScrollView>
