@@ -95,6 +95,7 @@ object MarkdownFileScanner {
     /**
      * Returns a random .md file from the cached list, filtered by tags.
      * Uses TagIndexManager for fast tag-based filtering (no file I/O needed).
+     * Tag logic: OR — shows notes matching ANY of the specified tags.
      * Anti-repeat: excludes recently shown notes.
      */
     fun getRandomFile(context: Context, folderUri: Uri): Uri? {
@@ -106,16 +107,15 @@ object MarkdownFileScanner {
         }
 
         val tags = PreferencesManager.getTagList(context)
-        val logic = PreferencesManager.getTagLogic(context)
 
-        // Filter by tags using the pre-built index
+        // Filter by tags using the pre-built index (OR logic)
         val eligible: List<String> = if (tags.isEmpty()) {
             cached
         } else {
-            val filtered = TagIndexManager.getFilesForTags(context, tags, logic)
+            val filtered = TagIndexManager.getFilesForTags(context, tags)
             if (filtered.isEmpty()) {
                 // Index might be stale — try fallback to direct content check
-                filterByTagsDirect(context, cached, tags, logic)
+                filterByTagsDirect(context, cached, tags)
             } else {
                 // Only include URIs that are still in the cache (file might have been deleted)
                 filtered.filter { it in cached }
@@ -167,9 +167,8 @@ object MarkdownFileScanner {
         }
 
         val tags = PreferencesManager.getTagList(context)
-        val logic = PreferencesManager.getTagLogic(context)
         val filteredCount = if (tags.isEmpty()) uris.size
-        else TagIndexManager.getFilteredCount(context, tags, logic)
+        else TagIndexManager.getFilteredCount(context, tags)
 
         return Pair(uris.size, filteredCount)
     }
@@ -284,8 +283,7 @@ object MarkdownFileScanner {
     private fun filterByTagsDirect(
         context: Context,
         cached: List<String>,
-        tags: List<String>,
-        logic: String
+        tags: List<String>
     ): List<String> {
         val searchPatterns = tags.map { tag ->
             val clean = tag.removePrefix("#").trim().lowercase()
@@ -299,12 +297,8 @@ object MarkdownFileScanner {
                     stream.bufferedReader(Charsets.UTF_8).readText()
                 }?.lowercase() ?: return@filter false
 
-                when (logic) {
-                    PreferencesManager.TAG_LOGIC_AND ->
-                        searchPatterns.all { pattern -> rawContent.contains(pattern) }
-                    else ->
-                        searchPatterns.any { pattern -> rawContent.contains(pattern) }
-                }
+                // OR logic: match if ANY tag is found
+                searchPatterns.any { pattern -> rawContent.contains(pattern) }
             } catch (e: Exception) {
                 false
             }

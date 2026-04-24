@@ -64,37 +64,20 @@ object TagIndexManager {
     }
 
     /**
-     * Get file URIs that match the given tags.
+     * Get file URIs that match ANY of the given tags (OR logic).
      *
      * @param tags list of tag names (without #)
-     * @param logic "or" = any tag matches, "and" = all tags must match
      */
-    fun getFilesForTags(context: Context, tags: List<String>, logic: String): List<String> {
+    fun getFilesForTags(context: Context, tags: List<String>): List<String> {
         val index = loadIndex(context) ?: return emptyList()
         if (tags.isEmpty()) return emptyList()
 
         val normalizedTags = tags.map { it.removePrefix("#").trim().lowercase() }
 
-        return when (logic) {
-            PreferencesManager.TAG_LOGIC_AND -> {
-                // Intersection: file must have ALL tags
-                val sets = normalizedTags.mapNotNull { tag ->
-                    index.tagToUris[tag]?.toSet()
-                }
-                if (sets.size < normalizedTags.size) {
-                    // Some tags don't exist at all
-                    emptyList()
-                } else {
-                    sets.reduce { acc, set -> acc.intersect(set) }.toList()
-                }
-            }
-            else -> {
-                // Union: file must have ANY tag
-                normalizedTags.flatMap { tag ->
-                    index.tagToUris[tag] ?: emptyList()
-                }.distinct()
-            }
-        }
+        // Union: file must have ANY tag
+        return normalizedTags.flatMap { tag ->
+            index.tagToUris[tag] ?: emptyList()
+        }.distinct()
     }
 
     /**
@@ -109,9 +92,9 @@ object TagIndexManager {
     /**
      * Get the count of files matching given tags (for badge display).
      */
-    fun getFilteredCount(context: Context, tags: List<String>, logic: String): Int {
+    fun getFilteredCount(context: Context, tags: List<String>): Int {
         if (tags.isEmpty()) return PreferencesManager.getCachedFileUris(context).size
-        return getFilesForTags(context, tags, logic).size
+        return getFilesForTags(context, tags).size
     }
 
     // ── Persistence ──────────────────────────────────────────────────────────

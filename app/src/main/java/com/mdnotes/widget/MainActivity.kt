@@ -491,12 +491,11 @@ class MainActivity : AppCompatActivity() {
     private fun updateFilteredCount() {
         lifecycleScope.launch {
             val tags = PreferencesManager.getTagList(this@MainActivity)
-            val logic = PreferencesManager.getTagLogic(this@MainActivity)
             val totalCount = PreferencesManager.getCachedFileUris(this@MainActivity).size
 
             if (tags.isNotEmpty() && totalCount > 0) {
                 val filteredCount = withContext(Dispatchers.IO) {
-                    TagIndexManager.getFilteredCount(this@MainActivity, tags, logic)
+                    TagIndexManager.getFilteredCount(this@MainActivity, tags)
                 }
                 tvFileCount.text = getString(R.string.files_filtered, filteredCount, totalCount,
                     tags.joinToString(", ") { "#$it" })

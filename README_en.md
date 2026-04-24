@@ -87,7 +87,7 @@
 - **Tags (ChipGroup)** — input via chips with autocomplete suggestions
 - **Tag index** — instant filtering without reading files
 - **Frontmatter + inline** — supports YAML `tags:` and inline `#hashtags`
-- **AND/OR logic** — require any tag or all tags simultaneously
+- **OR logic** — shows notes matching any of the specified tags
 - **Folder blacklist** — exclude directories from scanning
 - **Anti-repeat** — last 20 shown notes excluded from random selection
 
