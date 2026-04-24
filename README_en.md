@@ -1,6 +1,6 @@
 <div align="center">
-  <h1>MD Notes Widget v3.1</h1>
-  <p><b>Minimalist, beautiful, and battery-friendly Android widget for your Markdown notes.</b></p>
+  <h1>MD Notes Widget</h1>
+  <p><b>A Markdown note widget for your Android home screen.</b></p>
 
   <p>
     <a href="README.md">Русская версия (Russian)</a>
@@ -16,152 +16,89 @@
 
 ---
 
-**MD Notes Widget** is an Android application that brings your "Second Brain" to your home screen. It randomly selects and beautifully displays Markdown (`.md`) files from a folder on your device. Designed specifically to work seamlessly with local Obsidian Vaults and other offline Markdown editors.
+**MD Notes Widget** is an Android app for people who store notes in Markdown. It randomly displays `.md` files from a chosen folder directly on your home screen. Works great with **Obsidian**, Logseq, and any other local Markdown vault.
 
-## What's New in v3.1
+## Widgets
 
-### 🏷️ Tags Merged into Meta Line
-- Tags now appear on one line with date and folder on the widget
-- Example: `January 1, 2026, Psychology, #favorites`
-- Removed the separate tag row — everything is compact in one place
+| Widget | Description |
+|--------|-------------|
+| **Random Note** | Displays one note. Adapts line count to widget size |
+| **Extended Widget** | Shows the full note with maximum content |
 
-### ✏️ Edit Button (FAB) Improved
-- Icon changed from `+` to a pencil
-- Button is 2x smaller (mini size, 36dp)
-- Slightly raised for better usability
+Common widget features:
+- 📌 **Pin** — keep the current note on screen
+- ➕ **Create** — quickly create a `.md` file right from the widget
+- 🔄 **Refresh** — show a different random note
+- 🏷️ **Tag status** — shown inline with date and folder: `Apr 24 2026, Psychology, #favorites`
+- 🎨 **Themes** — Purple, Dark, Transparent, Custom
+- 🔡 **Font size** — Small / Medium / Large
 
-### 🏷️ Simplified Tag Filter
-- Removed AND/OR logic — now always OR (any matching tag)
-- Tags separated by comma: `favorites, daily`
+## Note Viewer
 
-## What's New in v3.0
-
-### 🏷️ Tag Filtering — Completely Redesigned
-- **Tag Index** — builds a `tag → files` index during scan for instant filtering (no re-reading files)
-- **ChipGroup UI** — convenient chips with delete button and autocomplete from real tags
-- **Correct badge** — shows "X of Y files (#tag)" instead of total count
-- **Widget tag status** — widget displays a `🏷️ #tag` chip when filter is active
-- **Inline #hashtag support** — finds tags in YAML frontmatter AND in note body
-
-### ✏️ Built-in Markdown Editor
-- **FAB toggle** — switches between view and edit mode
-- **Monospace font** for code editing
-- **Auto-save** — changes are written back to file via SAF
-- **Instant re-render** — note re-renders after saving
-
-### 📅 On This Day
-- New tab in bottom navigation
-- Shows notes created/modified on this day in previous years
-- Nostalgic feature for reviewing old entries
-
-### 🔍 Improved Search
-- **Debounced search** (300ms) — doesn't overload device on fast typing
-- **Match highlighting** — found text highlighted in yellow in title and preview
-- **Unified adapter** — search, history, and favorites share NoteListAdapter
-
-### 👆 Swipe Actions
-- **← Swipe left** in history/favorites → remove from list (red background)
-- **→ Swipe right** → open in Obsidian (purple background)
-
-### ⚡ Performance
-- **SAF ContentResolver.query()** — file scanning 10-50x faster (replaces DocumentFile.listFiles())
-- **LRU cache** for rendered SpannableStringBuilder — smooth scrolling
-- **Bitmap downsampling** — images loaded with inSampleSize, no OOM
-- **requestLayout() fix** — spannable rendering wrapped in `post {}`, no flickering
-- **Thread-safe** SimpleDateFormat via ThreadLocal
-
-### 🏗️ Architecture
-- **WidgetThemeHelper** — unified theme logic for both widgets
-- **TagIndexManager** — tag index manager with JSON persistence
-- **NoteListAdapter** — universal adapter replacing 3 duplicates
-- **FileOpener** — centralized Obsidian URI building
-
-## Key Features
-
-### Widgets
-- **Random note** — periodically shows a new note, adapts line count to widget size
-- **List widget** — displays full note with scrolling
-- **Pin** — tap 📌 to keep a note on the widget
-- **Tag status** — active tag chip displayed on widget
-- **Themes** — Purple, Dark, Transparent, or custom colors
-- **Font size** — Small / Medium / Large
-- **Auto-adaptation** — widget automatically adjusts line count to fit its size
-
-### Note Viewer
-- **Markdown rendering** — headings, **bold**, _italic_, ~~strikethrough~~, ☑ checkboxes, • lists
-- **Markdown editor** — edit notes with monospace font and auto-save
-- **Image previews** from notes (with downsampling)
-- **Swipe** between random notes
-- **Search** — live debounced search with match highlighting
-- **Favorites** — add/remove with one tap + swipe to remove
-- **History** — last 50 notes + swipe actions
+- **Markdown rendering** — headings, **bold**, _italic_, ~~strikethrough~~, ☑ checkboxes, lists
+- **Editor** — ✏️ button toggles edit mode with monospace font and auto-save
+- **Images** — horizontal scroll with image previews from the note
+- **Swipe** — swipe between random notes
+- **Search** — live search by note title and content
+- **Favorites** — add with one tap, swipe to remove
+- **History** — last 50 opened notes with swipe actions
 - **On This Day** — notes from this day in past years
-- **Create** — create new `.md` note
 - **Menu ⋮** — share, open in Obsidian, open externally, delete
 
-### Filtering
-- **Tags (ChipGroup)** — input via chips with autocomplete suggestions
-- **Tag index** — instant filtering without reading files
-- **Frontmatter + inline** — supports YAML `tags:` and inline `#hashtags`
-- **OR logic** — shows notes matching any of the specified tags
-- **Folder blacklist** — exclude directories from scanning
-- **Anti-repeat** — last 20 shown notes excluded from random selection
+## Filtering & Settings
 
-### Settings
-- Update interval: off / 15 min / 30 min / 1–24 hours
-- Quiet hours — widget won't update during specified period
-- Open action: built-in viewer / Obsidian / system chooser
-
-## Requirements
-
-- **Android 12.0+** (API 31) and above
-- Optimized for MIUI / HyperOS
+- **Tags** — enter tags separated by commas (`favorites, daily`); the widget shows only matching notes
+- **Tag search** — finds `#tags` in YAML frontmatter and inline in note text
+- **Auto-suggestions** — ChipGroup shows tags from your actual notes
+- **Folder blacklist** — exclude folders from scanning (`.trash`, `templates`, etc.)
+- **Anti-repeat** — last 20 shown notes are excluded from random selection
+- **Update interval** — off / 15 min / 30 min / 1–24 h
+- **Quiet hours** — widget won't update at night
+- **Click action** — built-in viewer / Obsidian / system chooser
 
 ## Installation
 
-1. Go to the [Releases](https://github.com/SlamTGK/MDNotesWidget/releases) page
-2. Download `app-release.apk`
-3. Install the APK on your device
+1. Download the APK from [Releases](../../releases/latest)
+2. Allow installation from unknown sources
+3. Install the APK
+4. Long-press on your home screen and add the **MD Notes Widget**
+5. In widget settings, select your folder with `.md` files
 
-> **Xiaomi / HyperOS**: For stable scheduled updates, enable "Autostart" and set Battery Saver to "No Restrictions" for this app.
+> **Xiaomi / HyperOS:** For reliable scheduled updates, enable "Autostart" and set Battery Saver to "No Restrictions" for this app.
 
-## Build from Source
+## Requirements
 
-```bash
-# Clone the repository
-git clone https://github.com/SlamTGK/MDNotesWidget.git
-cd MDNotesWidget
+- Android 12+ (API 31)
+- Folder access permission (via system dialog, no root required)
 
-# Build debug APK (requires Android SDK and JDK 17)
-./gradlew assembleDebug
+## Tech Stack
 
-# Or use GitHub Actions — APK is built automatically
-```
+- **Kotlin** + Android SDK
+- **Material You** — dynamic system colors
+- **SAF** (Storage Access Framework) — secure file access
+- **AlarmManager** — reliable periodic widget updates
+- **Coroutines** — async operations
 
 ## Project Structure
 
 ```
 app/src/main/java/com/mdnotes/widget/
-├── MDNotesApp.kt              # Application — Material You Dynamic Colors
-├── MainActivity.kt            # Settings screen (ChipGroup for tags)
+├── MainActivity.kt            # Settings screen
 ├── NoteViewerActivity.kt      # Full-screen viewer + editor + search
-├── HistoryActivity.kt         # History with swipe actions
+├── HistoryActivity.kt         # Note history with swipe actions
 ├── FavoritesActivity.kt       # Favorites with swipe actions
-├── NoteWidgetProvider.kt      # Main widget provider
-├── NoteListWidgetProvider.kt  # List widget provider
+├── NoteWidgetProvider.kt      # Main widget
+├── NoteListWidgetProvider.kt  # Extended widget
 ├── WidgetThemeHelper.kt       # Centralized widget theming
-├── PreferencesManager.kt      # Settings and state storage
-├── MarkdownFileScanner.kt     # .md scanning + rendering + tag extraction
+├── PreferencesManager.kt      # Settings & state storage
+├── MarkdownFileScanner.kt     # Scanning, rendering, tag extraction
 ├── TagIndexManager.kt         # Tag → URI index with JSON persistence
 ├── NoteListAdapter.kt         # Universal RecyclerView adapter
-└── FileOpener.kt              # File opening (Obsidian/System/Viewer)
+└── FileOpener.kt              # File opening (Obsidian / System / Viewer)
 ```
 
-## Author
+---
 
-Made with care by [aristocrat](https://github.com/SlamTGK)
-Telegram: [@slamtgk](https://t.me/slamtgk)
-
-## License
-
-This project is distributed as-is for personal use.
+<div align="center">
+  <p>Made with ❤️ by <a href="https://t.me/slamtgk">@slamtgk</a></p>
+</div>
