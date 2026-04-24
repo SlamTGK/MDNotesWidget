@@ -4,10 +4,15 @@ import android.app.Activity
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Intent
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.View
 import android.widget.EditText
+import android.widget.GridLayout
 import android.widget.LinearLayout
 import android.widget.RadioButton
 import android.widget.RadioGroup
@@ -21,6 +26,7 @@ import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.materialswitch.MaterialSwitch
+import com.google.android.material.textfield.TextInputEditText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -394,21 +400,117 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showColorPicker(currentColor: Int, onColorSelected: (Int) -> Unit) {
-        val hexInput = EditText(this).apply {
-            setText(String.format("#%06X", 0xFFFFFF and currentColor))
-            setSingleLine(true)
-            setPadding(48, 16, 48, 16)
+        // Preset palette: dark backgrounds, light texts, accents
+        val presets = listOf(
+            // Dark backgrounds
+            0xFF0D1117.toInt(), 0xFF161B22.toInt(), 0xFF1C1C1E.toInt(), 0xFF1E1E2E.toInt(),
+            0xFF1E1B4B.toInt(), 0xFF0F172A.toInt(), 0xFF1A1A2E.toInt(), 0xFF0A0A0F.toInt(),
+            // Coloured backgrounds
+            0xFF1E3A5F.toInt(), 0xFF1B4332.toInt(), 0xFF3B1F2B.toInt(), 0xFF2D1B69.toInt(),
+            0xFF1A2744.toInt(), 0xFF2C1810.toInt(), 0xFF0C3547.toInt(), 0xFF1F2937.toInt(),
+            // Light / neutral
+            0xFFFFFFFF.toInt(), 0xFFF8FAFC.toInt(), 0xFFF1F5F9.toInt(), 0xFFE2E8F0.toInt(),
+            0xFFF9FAFB.toInt(), 0xFFEFF6FF.toInt(), 0xFFF0FDF4.toInt(), 0xFFFDF2F8.toInt(),
+            // Accent colours
+            0xFF6366F1.toInt(), 0xFF8B5CF6.toInt(), 0xFF3B82F6.toInt(), 0xFF10B981.toInt(),
+            0xFFF59E0B.toInt(), 0xFFEF4444.toInt(), 0xFFEC4899.toInt(), 0xFF06B6D4.toInt()
+        )
+
+        val dialogView = layoutInflater.inflate(R.layout.dialog_color_picker, null)
+        val currentPreview = dialogView.findViewById<View>(R.id.color_current_preview)
+        val currentHexLabel = dialogView.findViewById<TextView>(R.id.color_current_hex)
+        val gridLayout = dialogView.findViewById<GridLayout>(R.id.color_preset_grid)
+        val hexInput = dialogView.findViewById<TextInputEditText>(R.id.color_hex_input)
+
+        var selectedColor = currentColor
+
+        fun updatePreview(color: Int) {
+            selectedColor = color
+            val d = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = 16f
+                setColor(color)
+                setStroke(2, Color.parseColor("#33FFFFFF"))
+            }
+            currentPreview.background = d
+            currentHexLabel.text = String.format("#%06X", 0xFFFFFF and color)
         }
+
+        updatePreview(currentColor)
+        hexInput.setText(String.format("#%06X", 0xFFFFFF and currentColor))
+
+        // Build preset color swatches
+        val density = resources.displayMetrics.density
+        val swatchSize = (36 * density).toInt()
+        val swatchMargin = (3 * density).toInt()
+
+        presets.forEachIndexed { index, preset ->
+            val swatch = View(this).apply {
+                val lp = GridLayout.LayoutParams().apply {
+                    width = swatchSize
+                    height = swatchSize
+                    setMargins(swatchMargin, swatchMargin, swatchMargin, swatchMargin)
+                }
+                layoutParams = lp
+                val d = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadius = 10f
+                    setColor(preset)
+                    setStroke(
+                        if (preset == currentColor) 4 else 1,
+                        if (preset == currentColor) Color.parseColor("#6366F1")
+                        else Color.parseColor("#44FFFFFF")
+                    )
+                }
+                background = d
+                setOnClickListener {
+                    updatePreview(preset)
+                    hexInput.setText(String.format("#%06X", 0xFFFFFF and preset))
+                    // Refresh all swatch borders
+                    for (i in 0 until gridLayout.childCount) {
+                        val child = gridLayout.getChildAt(i)
+                        val isSelected = i == index
+                        val cd = GradientDrawable().apply {
+                            shape = GradientDrawable.RECTANGLE
+                            cornerRadius = 10f
+                            setColor(presets[i])
+                            setStroke(
+                                if (isSelected) 4 else 1,
+                                if (isSelected) Color.parseColor("#6366F1")
+                                else Color.parseColor("#44FFFFFF")
+                            )
+                        }
+                        child.background = cd
+                    }
+                }
+            }
+            gridLayout.addView(swatch)
+        }
+
+        // Live hex input -> update preview
+        hexInput.addTextChangedListener(object : TextWatcher {
+            override fun afterTextChanged(s: Editable?) {
+                val hex = s?.toString()?.trim() ?: return
+                if (hex.length == 7 || hex.length == 9) {
+                    try {
+                        updatePreview(Color.parseColor(hex))
+                    } catch (_: Exception) {}
+                }
+            }
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+        })
+
         MaterialAlertDialogBuilder(this)
             .setTitle(R.string.pick_color)
-            .setView(hexInput)
+            .setView(dialogView)
             .setPositiveButton("OK") { _, _ ->
-                try {
-                    val color = android.graphics.Color.parseColor(hexInput.text.toString().trim())
-                    onColorSelected(color)
-                } catch (e: Exception) {
-                    Toast.makeText(this, "Invalid color", Toast.LENGTH_SHORT).show()
-                }
+                // Prefer hex field if user typed something valid
+                val hexStr = hexInput.text?.toString()?.trim() ?: ""
+                val finalColor = try {
+                    if (hexStr.startsWith("#")) Color.parseColor(hexStr) else selectedColor
+                } catch (_: Exception) { selectedColor }
+                onColorSelected(finalColor)
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()

@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <!-- Current color preview -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="16dp">
+
+        <View
+            android:id="@+id/color_current_preview"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="@drawable/color_swatch_bg" />
+
+        <TextView
+            android:id="@+id/color_current_hex"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:textSize="14sp"
+            android:textColor="?colorOnSurface"
+            android:fontFamily="monospace"
+            android:text="#FFFFFF" />
+    </LinearLayout>
+
+    <!-- Preset colors grid: 4 rows x 8 columns -->
+    <GridLayout
+        android:id="@+id/color_preset_grid"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:columnCount="8"
+        android:rowCount="4"
+        android:layout_marginBottom="16dp"
+        android:useDefaultMargins="false" />
+
+    <!-- Divider -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="?colorOutlineVariant"
+        android:layout_marginBottom="12dp" />
+
+    <!-- Hex input -->
+    <com.google.android.material.textfield.TextInputLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
+        android:hint="#RRGGBB">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/color_hex_input"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="monospace"
+            android:inputType="text"
+            android:maxLength="9"
+            android:textSize="14sp" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+</LinearLayout>
