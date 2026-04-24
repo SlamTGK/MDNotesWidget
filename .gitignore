@@ -49,3 +49,4 @@ google-services.json
 # Debug logs
 logcat*.log
 *.am.log
+0_Build Debug & Release APK.txt
