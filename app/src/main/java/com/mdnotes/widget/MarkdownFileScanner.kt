@@ -1,12 +1,13 @@
 package com.mdnotes.widget
 
 import android.content.Context
+import android.graphics.Typeface
 import android.net.Uri
 import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.style.RelativeSizeSpan
+import android.text.style.StrikethroughSpan
 import android.text.style.StyleSpan
-import android.graphics.Typeface
 import androidx.documentfile.provider.DocumentFile
 
 /**
@@ -18,6 +19,7 @@ object MarkdownFileScanner {
     // Pre-compiled regex patterns for performance
     private val REGEX_CODE_BLOCK = Regex("```[\\s\\S]*?```")
     private val REGEX_FRONTMATTER = Regex("^---[\\s\\S]*?---\\s*", RegexOption.MULTILINE)
+    private val REGEX_FRONTMATTER_BLOCK = Regex("^---\\s*\\n([\\s\\S]*?)\\n---", RegexOption.MULTILINE)
     private val REGEX_ATX_HEADING = Regex("^#{1,6}\\s+(.+)$", RegexOption.MULTILINE)
     private val REGEX_BOLD_ITALIC = Regex("\\*\\*\\*(.+?)\\*\\*\\*")
     private val REGEX_BOLD_STAR = Regex("\\*\\*(.+?)\\*\\*")
@@ -31,12 +33,19 @@ object MarkdownFileScanner {
     private val REGEX_LINK_OBSIDIAN = Regex("\\[\\[(.+?)]]")
     private val REGEX_LINK_MD = Regex("\\[(.+?)]\\(.*?\\)")
     private val REGEX_UNORDERED_LIST = Regex("^[*\\-+]\\s+", RegexOption.MULTILINE)
-    private val REGEX_ORDERED_LIST = Regex("^\\d+\\.\\s+", RegexOption.MULTILINE)
+    private val REGEX_ORDERED_LIST = Regex("^(\\d+)\\.\\s+", RegexOption.MULTILINE)
     private val REGEX_BLOCKQUOTE = Regex("^>+\\s*", RegexOption.MULTILINE)
     private val REGEX_HORIZONTAL_RULE = Regex("^[-*_]{3,}\\s*$", RegexOption.MULTILINE)
     private val REGEX_MULTIPLE_NEWLINES = Regex("\\n{3,}")
     private val REGEX_CHECKBOX_UNCHECKED = Regex("^\\s*-\\s*\\[\\s]\\s*", RegexOption.MULTILINE)
-    private val REGEX_CHECKBOX_CHECKED = Regex("^\\s*-\\s*\\[x]\\s*", RegexOption.MULTILINE)
+    private val REGEX_CHECKBOX_CHECKED = Regex("^\\s*-\\s*\\[xX]\\s*", RegexOption.MULTILINE)
+
+    // For inline formatting
+    private val INLINE_BOLD_ITALIC = Regex("\\*\\*\\*(.+?)\\*\\*\\*")
+    private val INLINE_BOLD = Regex("\\*\\*(.+?)\\*\\*|__(.+?)__")
+    private val INLINE_ITALIC = Regex("(?<![*_])\\*(?![*])(.+?)(?<![*_])\\*(?![*])|(?<![*_])_(?![_])(.+?)(?<![*_])_(?![_])")
+    private val INLINE_STRIKE = Regex("~~(.+?)~~")
+    private val INLINE_CODE = Regex("`(.+?)`")
 
     // Regex for extracting image references from markdown
     private val REGEX_IMAGE_REF_MD = Regex("!\\[([^]]*)]\\(([^)]+)\\)")
@@ -54,7 +63,8 @@ object MarkdownFileScanner {
 
     /**
      * Returns a random .md file from the cached list, filtered by tags (AND/OR logic).
-     * Uses pre-filtered list instead of random retries.
+     * Supports YAML frontmatter tags and inline #hashtags.
+     * Anti-repeat: excludes recently shown notes.
      */
     fun getRandomFile(context: Context, folderUri: Uri): Uri? {
         var cached = PreferencesManager.getCachedFileUris(context)
@@ -65,40 +75,44 @@ object MarkdownFileScanner {
         }
 
         val tags = PreferencesManager.getTagList(context)
-
-        // If no filter, just return random
-        if (tags.isEmpty()) {
-            return Uri.parse(cached.random())
-        }
-
         val tagLogic = PreferencesManager.getTagLogic(context)
 
-        // Pre-filter: read all files and find those matching tags
-        val matching = cached.filter { uriStr ->
-            try {
-                val uri = Uri.parse(uriStr)
-                val rawContent = context.contentResolver.openInputStream(uri)?.use { stream ->
-                    stream.bufferedReader(Charsets.UTF_8).readText()
+        // Filter by tags if set
+        val eligible: List<String> = if (tags.isEmpty()) {
+            cached
+        } else {
+            val searchTags = tags.map { it.removePrefix("#").trim().lowercase() }
+            cached.filter { uriStr ->
+                try {
+                    val uri = Uri.parse(uriStr)
+                    val rawContent = context.contentResolver.openInputStream(uri)?.use { stream ->
+                        stream.bufferedReader(Charsets.UTF_8).readText()
+                    } ?: return@filter false
+                    val noteTags = extractFrontmatterTags(rawContent)
+                    when (tagLogic) {
+                        PreferencesManager.TAG_LOGIC_AND ->
+                            searchTags.all { tag -> noteTags.contains(tag) }
+                        else ->
+                            searchTags.any { tag -> noteTags.contains(tag) }
+                    }
+                } catch (e: Exception) {
+                    false
                 }
-                if (rawContent == null) return@filter false
-
-                when (tagLogic) {
-                    PreferencesManager.TAG_LOGIC_AND ->
-                        tags.all { tag -> rawContent.contains(tag, ignoreCase = true) }
-                    else -> // OR
-                        tags.any { tag -> rawContent.contains(tag, ignoreCase = true) }
-                }
-            } catch (e: Exception) {
-                false
             }
         }
 
-        return if (matching.isNotEmpty()) {
-            Uri.parse(matching.random())
+        if (eligible.isEmpty()) return null
+
+        // Anti-repeat: exclude recently shown, unless pool is too small
+        val recentlyShown = PreferencesManager.getRecentlyShown(context)
+        val pool = if (eligible.size > 3) {
+            eligible.filter { it !in recentlyShown }
         } else {
-            // No matches found — return null to show "no notes" instead of silent fallback
-            null
+            eligible
         }
+        val chosen = (if (pool.isNotEmpty()) pool else eligible).random()
+        PreferencesManager.addToRecentlyShown(context, chosen)
+        return Uri.parse(chosen)
     }
 
     fun refreshCache(context: Context, folderUri: Uri): Int {
@@ -126,7 +140,7 @@ object MarkdownFileScanner {
             }
 
             // Extract image references before stripping markdown
-            val imageRefs = extractImageReferences(rawContent, fileUri)
+            val imageRefs = extractImageReferences(rawContent)
 
             NoteContent(
                 title = name.removeSuffix(".md"),
@@ -143,9 +157,6 @@ object MarkdownFileScanner {
         }
     }
 
-    /**
-     * Reads raw content of a file (no stripping).
-     */
     fun readRawContent(context: Context, fileUri: Uri): String? {
         return try {
             context.contentResolver.openInputStream(fileUri)?.use { stream ->
@@ -172,25 +183,73 @@ object MarkdownFileScanner {
     }
 
     /**
-     * Extracts image references from markdown content.
-     * Returns list of image paths/URIs found in the note.
+     * Extracts tags from YAML frontmatter AND inline #hashtags in the body.
+     * Returns a Set<String> of lowercase tags WITHOUT the '#' prefix.
+     *
+     * Supports:
+     *   tags: [tag1, tag2]
+     *   tags:
+     *     - tag1
+     *     - "#tag2"
+     * And inline body #hashtags.
      */
-    private fun extractImageReferences(rawContent: String, noteUri: Uri): List<String> {
-        val refs = mutableListOf<String>()
+    fun extractFrontmatterTags(rawContent: String): Set<String> {
+        val tags = mutableSetOf<String>()
 
-        // Standard markdown images: ![alt](path)
+        // Parse YAML frontmatter block
+        val fmMatch = REGEX_FRONTMATTER_BLOCK.find(rawContent)
+        if (fmMatch != null) {
+            val yaml = fmMatch.groupValues[1]
+
+            // Inline array: tags: [tag1, tag2, "#tag3"]
+            val inlineMatch = Regex("^tags:\\s*\\[(.+?)]", RegexOption.MULTILINE).find(yaml)
+            if (inlineMatch != null) {
+                inlineMatch.groupValues[1]
+                    .split(",")
+                    .map { it.trim().removePrefix("\"").removeSuffix("\"").removePrefix("'").removeSuffix("'").removePrefix("#").trim().lowercase() }
+                    .filter { it.isNotEmpty() }
+                    .forEach { tags.add(it) }
+            } else {
+                // Block list:
+                // tags:
+                //   - tag1
+                val blockMatch = Regex("^tags:\\s*\\n((?:[ \\t]*-[ \\t]+.+\\n?)+)", RegexOption.MULTILINE).find(yaml)
+                blockMatch?.groupValues?.get(1)?.lines()?.forEach { line ->
+                    val tag = line.trim().removePrefix("-").trim()
+                        .removePrefix("\"").removeSuffix("\"")
+                        .removePrefix("'").removeSuffix("'")
+                        .removePrefix("#").trim().lowercase()
+                    if (tag.isNotEmpty()) tags.add(tag)
+                }
+            }
+        }
+
+        // Also extract inline #hashtags from the text body (outside frontmatter)
+        val bodyStart = if (fmMatch != null) fmMatch.range.last + 1 else 0
+        val body = if (bodyStart < rawContent.length) rawContent.substring(bodyStart) else rawContent
+        Regex("#([\\w\\-/а-яёА-ЯЁ]+)").findAll(body).forEach {
+            tags.add(it.groupValues[1].lowercase())
+        }
+
+        return tags
+    }
+
+    /**
+     * Extracts image references from markdown content.
+     */
+    private fun extractImageReferences(rawContent: String): List<String> {
+        val refs = mutableListOf<String>()
         REGEX_IMAGE_REF_MD.findAll(rawContent).forEach { match ->
             val path = match.groupValues[2].trim()
-            if (path.isNotEmpty()) refs.add(path)
+            if (path.isNotEmpty() && !path.startsWith("http")) refs.add(path)
         }
-
-        // Obsidian-style: ![[image.png]]
         REGEX_IMAGE_REF_OBSIDIAN.findAll(rawContent).forEach { match ->
             val path = match.groupValues[1].trim()
-            if (path.isNotEmpty()) refs.add(path)
+            // Handle "image.png|200" syntax (Obsidian size hints)
+            val cleanPath = path.substringBefore("|").trim()
+            if (cleanPath.isNotEmpty()) refs.add(cleanPath)
         }
-
-        return refs
+        return refs.distinct()
     }
 
     /**
@@ -216,7 +275,7 @@ object MarkdownFileScanner {
             .replace(REGEX_CHECKBOX_UNCHECKED, "\u2610 ")  // ☐
             .replace(REGEX_CHECKBOX_CHECKED, "\u2611 ")    // ☑
             .replace(REGEX_UNORDERED_LIST, "\u2022 ")      // •
-            .replace(REGEX_ORDERED_LIST, "\u2022 ")
+            .replace(REGEX_ORDERED_LIST, "$1. ")
             .replace(REGEX_BLOCKQUOTE, "")
             .replace(REGEX_HORIZONTAL_RULE, "")
             .replace(REGEX_MULTIPLE_NEWLINES, "\n\n")
@@ -224,12 +283,12 @@ object MarkdownFileScanner {
     }
 
     /**
-     * Renders markdown to SpannableStringBuilder with basic formatting
-     * (headings, bold, italic) for use in the full-screen viewer.
+     * Renders markdown to SpannableStringBuilder with formatting
+     * (headings bold+large, bold, italic, strikethrough, checkboxes, lists).
+     * FIXED: spans are preserved — no SpannableStringBuilder(string) reconstruction.
      */
     fun renderMarkdownToSpannable(text: String): SpannableStringBuilder {
-        // First strip frontmatter and code blocks
-        var processed = text
+        val processed = text
             .replace(REGEX_FRONTMATTER, "")
             .replace(REGEX_CODE_BLOCK, "")
             .replace(REGEX_IMAGE_MD, "")
@@ -262,43 +321,90 @@ object MarkdownFileScanner {
                     Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
                 )
             } else {
-                var processedLine = line
+                // Pre-process line-level markers
+                val processedLine = line
                     .replace(REGEX_CHECKBOX_UNCHECKED, "\u2610 ")
                     .replace(REGEX_CHECKBOX_CHECKED, "\u2611 ")
                     .replace(REGEX_UNORDERED_LIST, "\u2022 ")
-                    .replace(REGEX_ORDERED_LIST, "\u2022 ")
-                    .replace(REGEX_BLOCKQUOTE, "")
+                    .replace(REGEX_ORDERED_LIST, "$1. ")
+                    .replace(REGEX_BLOCKQUOTE, "\u2502 ")
+                    .replace(REGEX_HORIZONTAL_RULE, "\u2500\u2500\u2500\u2500\u2500")
                     .replace(REGEX_LINK_OBSIDIAN, "$1")
                     .replace(REGEX_LINK_MD, "$1")
-
-                // Handle bold
-                val boldPattern = Regex("\\*\\*(.+?)\\*\\*")
-                val italicPattern = Regex("\\*(.+?)\\*")
-
-                var cursor = 0
-                val start = builder.length
-
-                // Simple approach: strip formatting markers, add styled text
-                processedLine = processedLine
-                    .replace(REGEX_BOLD_ITALIC, "$1")
-                    .replace(REGEX_BOLD_STAR, "$1")
-                    .replace(REGEX_BOLD_UNDER, "$1")
-                    .replace(REGEX_ITALIC_STAR, "$1")
-                    .replace(REGEX_ITALIC_UNDER, "$1")
-                    .replace(REGEX_STRIKETHROUGH, "$1")
                     .replace(REGEX_INLINE_CODE, "$1")
 
-                builder.append(processedLine)
+                appendInlineFormatted(builder, processedLine)
                 builder.append("\n")
             }
         }
 
-        // Collapse multiple blank lines
-        val result = builder.toString()
-            .replace(Regex("\\n{3,}"), "\n\n")
-            .trimEnd()
+        // Collapse multiple blank lines in-place (no span loss!)
+        var i = 0
+        while (i < builder.length - 2) {
+            if (builder[i] == '\n' && builder[i + 1] == '\n' && builder[i + 2] == '\n') {
+                var j = i + 2
+                while (j < builder.length && builder[j] == '\n') j++
+                builder.replace(i + 2, j, "")
+            } else {
+                i++
+            }
+        }
+        // Trim trailing newlines
+        while (builder.isNotEmpty() && builder[builder.length - 1] == '\n') {
+            builder.delete(builder.length - 1, builder.length)
+        }
 
-        return SpannableStringBuilder(result)
+        return builder
+    }
+
+    /**
+     * Appends text with inline bold/italic/strikethrough spans to builder.
+     */
+    private fun appendInlineFormatted(builder: SpannableStringBuilder, text: String) {
+        var remaining = text
+        while (remaining.isNotEmpty()) {
+            // Find the earliest inline marker
+            val biMatch = INLINE_BOLD_ITALIC.find(remaining)
+            val bMatch = INLINE_BOLD.find(remaining)
+            val iMatch = INLINE_ITALIC.find(remaining)
+            val sMatch = INLINE_STRIKE.find(remaining)
+
+            val first = listOf(biMatch, bMatch, iMatch, sMatch)
+                .filterNotNull()
+                .minByOrNull { it.range.first }
+
+            if (first == null) {
+                builder.append(remaining)
+                break
+            }
+
+            // Append text before the match
+            if (first.range.first > 0) {
+                builder.append(remaining.substring(0, first.range.first))
+            }
+
+            // Get content and determine span type
+            val content = first.groupValues.drop(1).firstOrNull { it.isNotEmpty() } ?: first.value
+            val spanStart = builder.length
+            builder.append(content)
+
+            when (first.pattern) {
+                INLINE_BOLD_ITALIC.pattern -> {
+                    builder.setSpan(StyleSpan(Typeface.BOLD_ITALIC), spanStart, builder.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                }
+                INLINE_BOLD.pattern -> {
+                    builder.setSpan(StyleSpan(Typeface.BOLD), spanStart, builder.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                }
+                INLINE_ITALIC.pattern -> {
+                    builder.setSpan(StyleSpan(Typeface.ITALIC), spanStart, builder.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                }
+                INLINE_STRIKE.pattern -> {
+                    builder.setSpan(StrikethroughSpan(), spanStart, builder.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                }
+            }
+
+            remaining = remaining.substring(first.range.last + 1)
+        }
     }
 
     // ── Data class ────────────────────────────────────────────────────────────

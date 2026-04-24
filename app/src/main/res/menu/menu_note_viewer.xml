@@ -2,15 +2,38 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
+    <!-- Overflow menu with all actions -->
     <item
-        android:id="@+id/action_open_obsidian"
-        android:title="@string/obsidian"
-        android:icon="@drawable/ic_obsidian"
-        app:showAsAction="ifRoom" />
+        android:id="@+id/action_overflow"
+        android:icon="@drawable/ic_more_vert"
+        android:title="@string/more_options"
+        app:showAsAction="always">
+        <menu>
+            <item
+                android:id="@+id/action_favorite"
+                android:icon="@drawable/ic_star"
+                android:title="@string/add_to_favorites" />
+            <item
+                android:id="@+id/action_share"
+                android:icon="@drawable/ic_share"
+                android:title="@string/share_note" />
+            <item
+                android:id="@+id/action_open_obsidian"
+                android:icon="@drawable/ic_obsidian"
+                android:title="@string/obsidian" />
+            <item
+                android:id="@+id/action_open_external"
+                android:icon="@drawable/ic_open_external"
+                android:title="@string/open_external" />
+            <item
+                android:id="@+id/action_create_note"
+                android:icon="@drawable/ic_add"
+                android:title="@string/create_note" />
+            <item
+                android:id="@+id/action_delete"
+                android:icon="@drawable/ic_delete"
+                android:title="@string/delete_note" />
+        </menu>
+    </item>
 
-    <item
-        android:id="@+id/action_open_external"
-        android:title="@string/open_external"
-        android:icon="@drawable/ic_open_external"
-        app:showAsAction="ifRoom" />
 </menu>

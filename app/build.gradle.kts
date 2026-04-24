@@ -11,16 +11,36 @@ android {
         applicationId = "com.mdnotes.widget"
         minSdk = 31
         targetSdk = 36
-        versionCode = 5
-        versionName = "2.1"
+        versionCode = 6
+        versionName = "2.5"
     }
 
     signingConfigs {
+        // Debug keystore (local development)
         getByName("debug") {
             storeFile = file("${System.getProperty("user.home")}/.android/debug.keystore")
             storePassword = "android"
             keyAlias = "androiddebugkey"
             keyPassword = "android"
+        }
+        // Release keystore — reads from env variables (set via GitHub Secrets)
+        create("release") {
+            val ksPath = System.getenv("KEYSTORE_PATH")
+            val ksPassword = System.getenv("KEYSTORE_PASSWORD")
+            val ksAlias = System.getenv("KEY_ALIAS")
+            val ksKeyPassword = System.getenv("KEY_PASSWORD")
+            if (ksPath != null && ksPassword != null && ksAlias != null && ksKeyPassword != null) {
+                storeFile = file(ksPath)
+                storePassword = ksPassword
+                keyAlias = ksAlias
+                keyPassword = ksKeyPassword
+            } else {
+                // Fallback to debug keystore when secrets are not configured
+                storeFile = file("${System.getProperty("user.home")}/.android/debug.keystore")
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
         }
     }
 
@@ -31,7 +51,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
         }
         debug {
             signingConfig = signingConfigs.getByName("debug")

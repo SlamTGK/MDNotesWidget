@@ -46,12 +46,13 @@
         android:layout_marginEnd="14dp"
         android:background="@color/widget_divider" />
 
-    <!-- Stack of notes -->
-    <StackView
+    <!-- ListView of notes (replaces buggy StackView) -->
+    <ListView
         android:id="@+id/widget_stack"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:gravity="center"
-        android:loopViews="true" />
+        android:divider="@color/widget_divider"
+        android:dividerHeight="1dp"
+        android:scrollbars="none" />
 
 </LinearLayout>

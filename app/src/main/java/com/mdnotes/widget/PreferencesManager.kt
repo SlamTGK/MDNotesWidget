@@ -5,8 +5,6 @@ import android.net.Uri
 
 /**
  * Central manager for all SharedPreferences storage.
- * Stores folder URI, update interval, open-with preference,
- * cached file list, per-widget state, quiet hours, custom colors, etc.
  */
 object PreferencesManager {
 
@@ -22,7 +20,7 @@ object PreferencesManager {
     // Open-with values
     const val OPEN_WITH_OBSIDIAN = "obsidian"
     const val OPEN_WITH_SYSTEM = "system"
-    const val OPEN_WITH_VIEWER = "viewer" // New: built-in viewer
+    const val OPEN_WITH_VIEWER = "viewer"
 
     // Theme values
     const val THEME_DEFAULT = "default"
@@ -38,6 +36,9 @@ object PreferencesManager {
     // Tag logic
     const val TAG_LOGIC_OR = "or"
     const val TAG_LOGIC_AND = "and"
+
+    private const val MAX_HISTORY_SIZE = 50
+    private const val MAX_RECENTLY_SHOWN = 20
 
     // ── Folder URI ────────────────────────────────────────────────────────────
 
@@ -136,7 +137,6 @@ object PreferencesManager {
         prefs(context).edit().putString("tag_filter", value.trim()).apply()
     }
 
-    /** Returns individual tags parsed from the tag filter string */
     fun getTagList(context: Context): List<String> {
         val raw = getTagFilter(context)
         if (raw.isBlank()) return emptyList()
@@ -177,18 +177,16 @@ object PreferencesManager {
         prefs(context).edit().putBoolean("quiet_hours_enabled", enabled).apply()
     }
 
-    /** Quiet hours start in minutes from midnight (e.g. 23:00 = 1380) */
     fun getQuietHoursStart(context: Context): Int {
-        return prefs(context).getInt("quiet_hours_start", 23 * 60) // default 23:00
+        return prefs(context).getInt("quiet_hours_start", 23 * 60)
     }
 
     fun setQuietHoursStart(context: Context, minutesFromMidnight: Int) {
         prefs(context).edit().putInt("quiet_hours_start", minutesFromMidnight).apply()
     }
 
-    /** Quiet hours end in minutes from midnight (e.g. 7:00 = 420) */
     fun getQuietHoursEnd(context: Context): Int {
-        return prefs(context).getInt("quiet_hours_end", 7 * 60) // default 07:00
+        return prefs(context).getInt("quiet_hours_end", 7 * 60)
     }
 
     fun setQuietHoursEnd(context: Context, minutesFromMidnight: Int) {
@@ -204,7 +202,6 @@ object PreferencesManager {
         return if (start <= end) {
             currentMinutes in start..end
         } else {
-            // Wraps midnight, e.g. 23:00 - 07:00
             currentMinutes >= start || currentMinutes <= end
         }
     }
@@ -227,10 +224,8 @@ object PreferencesManager {
             }
             return emptyList()
         }
-
         return try {
-            val jsonStr = file.readText()
-            val jsonArray = org.json.JSONArray(jsonStr)
+            val jsonArray = org.json.JSONArray(file.readText())
             (0 until jsonArray.length()).map { jsonArray.getString(it) }
         } catch (e: Exception) {
             emptyList()
@@ -240,9 +235,7 @@ object PreferencesManager {
     fun setCachedFileUris(context: Context, uris: List<String>) {
         try {
             val jsonArray = org.json.JSONArray()
-            for (uri in uris) {
-                jsonArray.put(uri)
-            }
+            for (uri in uris) jsonArray.put(uri)
             getCacheFile(context).writeText(jsonArray.toString())
         } catch (e: Exception) {
             e.printStackTrace()
@@ -279,31 +272,82 @@ object PreferencesManager {
 
     // ── Note history ──────────────────────────────────────────────────────────
 
-    private const val MAX_HISTORY_SIZE = 50
-
     fun getNoteHistory(context: Context): List<String> {
+        return readJsonList(context, "note_history.json")
+    }
+
+    fun addToNoteHistory(context: Context, noteUri: String) {
+        val history = getNoteHistory(context).toMutableList()
+        history.remove(noteUri)
+        history.add(0, noteUri)
+        writeJsonList(context, "note_history.json", history.take(MAX_HISTORY_SIZE))
+    }
+
+    // ── Favorites ────────────────────────────────────────────────────────────
+
+    fun getFavorites(context: Context): List<String> {
+        return readJsonList(context, "favorites.json")
+    }
+
+    fun isFavorite(context: Context, noteUri: String): Boolean {
+        return getFavorites(context).contains(noteUri)
+    }
+
+    fun addToFavorites(context: Context, noteUri: String) {
+        val favs = getFavorites(context).toMutableList()
+        if (!favs.contains(noteUri)) {
+            favs.add(0, noteUri)
+            writeJsonList(context, "favorites.json", favs)
+        }
+    }
+
+    fun removeFromFavorites(context: Context, noteUri: String) {
+        val favs = getFavorites(context).toMutableList()
+        favs.remove(noteUri)
+        writeJsonList(context, "favorites.json", favs)
+    }
+
+    fun toggleFavorite(context: Context, noteUri: String): Boolean {
+        return if (isFavorite(context, noteUri)) {
+            removeFromFavorites(context, noteUri)
+            false
+        } else {
+            addToFavorites(context, noteUri)
+            true
+        }
+    }
+
+    // ── Recently shown (anti-repeat) ──────────────────────────────────────────
+
+    fun getRecentlyShown(context: Context): List<String> {
+        return readJsonList(context, "recently_shown.json")
+    }
+
+    fun addToRecentlyShown(context: Context, noteUri: String) {
+        val recent = getRecentlyShown(context).toMutableList()
+        recent.remove(noteUri)
+        recent.add(0, noteUri)
+        writeJsonList(context, "recently_shown.json", recent.take(MAX_RECENTLY_SHOWN))
+    }
+
+    // ── JSON helpers ─────────────────────────────────────────────────────────
+
+    private fun readJsonList(context: Context, filename: String): List<String> {
         return try {
-            val historyFile = java.io.File(context.filesDir, "note_history.json")
-            if (!historyFile.exists()) return emptyList()
-            val jsonArray = org.json.JSONArray(historyFile.readText())
+            val file = java.io.File(context.filesDir, filename)
+            if (!file.exists()) return emptyList()
+            val jsonArray = org.json.JSONArray(file.readText())
             (0 until jsonArray.length()).map { jsonArray.getString(it) }
         } catch (e: Exception) {
             emptyList()
         }
     }
 
-    fun addToNoteHistory(context: Context, noteUri: String) {
+    private fun writeJsonList(context: Context, filename: String, list: List<String>) {
         try {
-            val history = getNoteHistory(context).toMutableList()
-            history.remove(noteUri) // Remove if already exists to avoid duplicates
-            history.add(0, noteUri) // Add to front
-            // Trim to max size
-            val trimmed = history.take(MAX_HISTORY_SIZE)
             val jsonArray = org.json.JSONArray()
-            for (uri in trimmed) {
-                jsonArray.put(uri)
-            }
-            java.io.File(context.filesDir, "note_history.json").writeText(jsonArray.toString())
+            for (item in list) jsonArray.put(item)
+            java.io.File(context.filesDir, filename).writeText(jsonArray.toString())
         } catch (e: Exception) {
             e.printStackTrace()
         }

@@ -18,6 +18,7 @@ class NoteWidgetProvider : AppWidgetProvider() {
         const val ACTION_OPEN_NOTE = "com.mdnotes.widget.ACTION_OPEN_NOTE"
         const val ACTION_PERIODIC_UPDATE = "com.mdnotes.widget.ACTION_PERIODIC_UPDATE"
         const val ACTION_PIN_NOTE = "com.mdnotes.widget.ACTION_PIN_NOTE"
+        const val ACTION_CREATE_NOTE = "com.mdnotes.widget.ACTION_CREATE_NOTE"
         const val EXTRA_WIDGET_ID = "extra_widget_id"
         const val EXTRA_NOTE_URI = "extra_note_uri"
 
@@ -208,6 +209,11 @@ class NoteWidgetProvider : AppWidgetProvider() {
                 R.id.widget_pin_btn,
                 buildPinPendingIntent(context, widgetId)
             )
+            // Click: create note
+            views.setOnClickPendingIntent(
+                R.id.widget_create_btn,
+                buildCreateNotePendingIntent(context, widgetId)
+            )
 
             return views
         }
@@ -284,6 +290,19 @@ class NoteWidgetProvider : AppWidgetProvider() {
             }
             return PendingIntent.getBroadcast(
                 context, widgetId + 30000,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+        }
+
+        private fun buildCreateNotePendingIntent(context: Context, widgetId: Int): PendingIntent {
+            // Opens NoteViewerActivity which handles create dialog
+            val intent = Intent(context, NoteViewerActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                putExtra("action_create", true)
+            }
+            return PendingIntent.getActivity(
+                context, widgetId + 40000,
                 intent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )

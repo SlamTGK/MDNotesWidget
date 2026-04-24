@@ -29,8 +29,8 @@
 
     <!-- Tag filter -->
     <string name="tag_settings">Фильтр по тегам</string>
-    <string name="tag_hint">Например: #quotes; #daily</string>
-    <string name="tag_desc">Несколько тегов через ; или ,</string>
+    <string name="tag_hint">Например: избранное; daily (без #)</string>
+    <string name="tag_desc">Несколько тегов через ; или ,  — ищет в свойствах заметки</string>
     <string name="tag_logic_label">Логика фильтрации</string>
     <string name="tag_logic_or">Любой тег (ИЛИ)</string>
     <string name="tag_logic_and">Все теги (И)</string>
@@ -42,8 +42,8 @@
     <string name="interval_30m">30 мин</string>
     <string name="interval_max">24 ч</string>
 
-    <string name="app_version">v2.1</string>
-    <string name="author_credit">MD Notes Widget v2.1\nMade by aristocrat \u2022 @slamtgk</string>
+    <string name="app_version">v2.5</string>
+    <string name="author_credit">MD Notes Widget v2.5\nMade by aristocrat \u2022 @slamtgk</string>
     <string name="actions_section">Управление</string>
 
     <!-- Folder -->
@@ -101,4 +101,31 @@
 
     <!-- List widget -->
     <string name="widget_list_description">Список заметок с пролистыванием</string>
+
+    <!-- Overflow menu -->
+    <string name="more_options">Ещё</string>
+    <string name="share_note">Поделиться</string>
+    <string name="delete_note">Удалить заметку</string>
+    <string name="delete_note_confirm">Вы уверены? Файл будет удалён с устройства без возможности восстановления.</string>
+    <string name="delete">Удалить</string>
+    <string name="note_deleted">Заметка удалена</string>
+    <string name="error_deleting_file">Не удалось удалить файл</string>
+
+    <!-- Favorites -->
+    <string name="favorites">Избранное</string>
+    <string name="add_to_favorites">В избранное</string>
+    <string name="remove_from_favorites">Убрать из избранного</string>
+    <string name="no_favorites">Нет избранных заметок</string>
+    <string name="added_to_favorites">Добавлено в избранное ★</string>
+    <string name="removed_from_favorites">Убрано из избранного</string>
+
+    <!-- Search -->
+    <string name="search_notes">Поиск заметок…</string>
+    <string name="no_results">Ничего не найдено</string>
+
+    <!-- Create note -->
+    <string name="create_note">Создать заметку</string>
+    <string name="note_name_hint">Название заметки</string>
+    <string name="note_created">Заметка создана</string>
+    <string name="error_creating_note">Не удалось создать заметку</string>
 </resources>

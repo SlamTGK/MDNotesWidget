@@ -17,6 +17,36 @@
         app:navigationIcon="@drawable/ic_chevron_right"
         app:menu="@menu/menu_note_viewer" />
 
+    <!-- Search panel (hidden by default) -->
+    <LinearLayout
+        android:id="@+id/search_panel"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <EditText
+            android:id="@+id/search_edit"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/search_notes"
+            android:padding="16dp"
+            android:inputType="text"
+            android:background="?colorSurface"
+            android:textSize="16sp" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="?colorOutlineVariant" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/search_recycler"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+    </LinearLayout>
+
     <!-- ViewPager for swipe between random notes -->
     <androidx.viewpager2.widget.ViewPager2
         android:id="@+id/viewpager_notes"

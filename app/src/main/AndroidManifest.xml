@@ -48,6 +48,15 @@
             android:taskAffinity=""
             android:excludeFromRecents="true" />
 
+        <!-- Favorites activity -->
+        <activity
+            android:name=".FavoritesActivity"
+            android:exported="false"
+            android:label="@string/favorites"
+            android:theme="@style/Theme.MDNotesWidget.NoteViewer"
+            android:taskAffinity=""
+            android:excludeFromRecents="true" />
+
         <!-- Single note widget receiver -->
         <receiver
             android:name=".NoteWidgetProvider"
@@ -59,6 +68,7 @@
                 <action android:name="com.mdnotes.widget.ACTION_OPEN_NOTE" />
                 <action android:name="com.mdnotes.widget.ACTION_PERIODIC_UPDATE" />
                 <action android:name="com.mdnotes.widget.ACTION_PIN_NOTE" />
+                <action android:name="com.mdnotes.widget.ACTION_CREATE_NOTE" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
