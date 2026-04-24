@@ -540,46 +540,7 @@
                     android:textSize="14sp"
                     android:paddingBottom="12dp" />
 
-                <!-- Tag logic: AND / OR -->
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="@string/tag_logic_label"
-                    android:textColor="?colorPrimary"
-                    android:textSize="11sp"
-                    android:textAllCaps="true"
-                    android:letterSpacing="0.08"
-                    android:textStyle="bold" />
 
-                <RadioGroup
-                    android:id="@+id/radio_group_tag_logic"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:layout_marginTop="8dp">
-
-                    <RadioButton
-                        android:id="@+id/radio_tag_or"
-                        android:layout_width="0dp"
-                        android:layout_height="40dp"
-                        android:layout_weight="1"
-                        android:text="@string/tag_logic_or"
-                        android:textColor="?colorOnSurface"
-                        android:textSize="13sp"
-                        android:buttonTint="?colorPrimary"
-                        android:checked="true" />
-
-                    <RadioButton
-                        android:id="@+id/radio_tag_and"
-                        android:layout_width="0dp"
-                        android:layout_height="40dp"
-                        android:layout_weight="1"
-                        android:text="@string/tag_logic_and"
-                        android:textColor="?colorOnSurface"
-                        android:textSize="13sp"
-                        android:buttonTint="?colorPrimary" />
-                </RadioGroup>
 
                 <!-- Folder blacklist -->
                 <TextView
@@ -739,6 +700,31 @@
                     android:textSize="14sp"
                     style="@style/Widget.Material3.Button.TonalButton"
                     app:cornerRadius="12dp" />
+
+                <!-- Scanning indicator -->
+                <LinearLayout
+                    android:id="@+id/scanning_indicator"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:visibility="gone"
+                    android:layout_marginTop="8dp">
+
+                    <ProgressBar
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        style="?android:attr/progressBarStyleSmall" />
+
+                    <TextView
+                        android:id="@+id/tv_scanning_status"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="10dp"
+                        android:text="@string/scanning_files"
+                        android:textColor="?colorOnSurfaceVariant"
+                        android:textSize="12sp" />
+                </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 

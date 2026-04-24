@@ -342,26 +342,6 @@ class MainActivity : AppCompatActivity() {
 
         editTag.setText(PreferencesManager.getTagFilter(this))
         editBlacklist.setText(PreferencesManager.getFolderBlacklistRaw(this))
-
-        // Tag logic
-        val tagLogic = PreferencesManager.getTagLogic(this)
-        val radioOr = findViewById<RadioButton>(R.id.radio_tag_or)
-        val radioAnd = findViewById<RadioButton>(R.id.radio_tag_and)
-
-        if (tagLogic == PreferencesManager.TAG_LOGIC_AND) {
-            radioAnd.isChecked = true
-        } else {
-            radioOr.isChecked = true
-        }
-
-        val logicGroup = findViewById<RadioGroup>(R.id.radio_group_tag_logic)
-        logicGroup.setOnCheckedChangeListener { _, checkedId ->
-            val value = if (checkedId == R.id.radio_tag_and)
-                PreferencesManager.TAG_LOGIC_AND
-            else
-                PreferencesManager.TAG_LOGIC_OR
-            PreferencesManager.setTagLogic(this, value)
-        }
     }
 
     private fun setupQuietHoursSection() {
@@ -440,10 +420,17 @@ class MainActivity : AppCompatActivity() {
                 Toast.makeText(this, getString(R.string.no_folder_selected), Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
+            // Show scanning indicator
+            val scanIndicator = findViewById<View>(R.id.scanning_indicator)
+            val scanStatus = findViewById<TextView>(R.id.tv_scanning_status)
+            scanIndicator.visibility = View.VISIBLE
+            scanStatus.text = getString(R.string.scanning_files)
+
             lifecycleScope.launch {
                 val count = withContext(Dispatchers.IO) {
                     MarkdownFileScanner.refreshCache(this@MainActivity, folderUri)
                 }
+                scanIndicator.visibility = View.GONE
                 updateFileCountBadge(count)
                 Toast.makeText(
                     this@MainActivity,
@@ -488,11 +475,21 @@ class MainActivity : AppCompatActivity() {
 
     private fun triggerWidgetUpdate() {
         val manager = AppWidgetManager.getInstance(this)
+        // Update main note widget
         val ids = manager.getAppWidgetIds(ComponentName(this, NoteWidgetProvider::class.java))
         if (ids.isNotEmpty()) {
             val intent = Intent(this, NoteWidgetProvider::class.java).apply {
                 action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
                 putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids)
+            }
+            sendBroadcast(intent)
+        }
+        // Update scrollable note widget
+        val listIds = manager.getAppWidgetIds(ComponentName(this, NoteListWidgetProvider::class.java))
+        if (listIds.isNotEmpty()) {
+            val intent = Intent(this, NoteListWidgetProvider::class.java).apply {
+                action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+                putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, listIds)
             }
             sendBroadcast(intent)
         }

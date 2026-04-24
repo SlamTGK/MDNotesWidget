@@ -62,8 +62,8 @@ object MarkdownFileScanner {
     }
 
     /**
-     * Returns a random .md file from the cached list, filtered by tags (AND/OR logic).
-     * Supports YAML frontmatter tags and inline #hashtags.
+     * Returns a random .md file from the cached list, filtered by tags.
+     * Tag matching: searches for #tag directly in the raw note text.
      * Anti-repeat: excludes recently shown notes.
      */
     fun getRandomFile(context: Context, folderUri: Uri): Uri? {
@@ -75,26 +75,24 @@ object MarkdownFileScanner {
         }
 
         val tags = PreferencesManager.getTagList(context)
-        val tagLogic = PreferencesManager.getTagLogic(context)
 
         // Filter by tags if set
         val eligible: List<String> = if (tags.isEmpty()) {
             cached
         } else {
-            val searchTags = tags.map { it.removePrefix("#").trim().lowercase() }
+            // Normalize: ensure each tag has # prefix for searching
+            val searchPatterns = tags.map { tag ->
+                val clean = tag.removePrefix("#").trim().lowercase()
+                "#$clean"
+            }
             cached.filter { uriStr ->
                 try {
                     val uri = Uri.parse(uriStr)
                     val rawContent = context.contentResolver.openInputStream(uri)?.use { stream ->
                         stream.bufferedReader(Charsets.UTF_8).readText()
-                    } ?: return@filter false
-                    val noteTags = extractFrontmatterTags(rawContent)
-                    when (tagLogic) {
-                        PreferencesManager.TAG_LOGIC_AND ->
-                            searchTags.all { tag -> noteTags.contains(tag) }
-                        else ->
-                            searchTags.any { tag -> noteTags.contains(tag) }
-                    }
+                    }?.lowercase() ?: return@filter false
+                    // Match if ANY of the search tags is found in the raw content
+                    searchPatterns.any { pattern -> rawContent.contains(pattern) }
                 } catch (e: Exception) {
                     false
                 }
@@ -120,6 +118,7 @@ object MarkdownFileScanner {
         PreferencesManager.setCachedFileUris(context, uris)
         return uris.size
     }
+
 
     fun readNoteContent(context: Context, fileUri: Uri): NoteContent? {
         return try {

@@ -29,8 +29,8 @@
 
     <!-- Tag filter -->
     <string name="tag_settings">Фильтр по тегам</string>
-    <string name="tag_hint">Например: избранное; daily (без #)</string>
-    <string name="tag_desc">Несколько тегов через ; или ,  — ищет в свойствах заметки</string>
+    <string name="tag_hint">Например: избранное, daily</string>
+    <string name="tag_desc">Теги через запятую. Ищет #тег в тексте заметки</string>
     <string name="tag_logic_label">Логика фильтрации</string>
     <string name="tag_logic_or">Любой тег (ИЛИ)</string>
     <string name="tag_logic_and">Все теги (И)</string>
@@ -65,6 +65,7 @@
     <string name="files_refreshed">Найдено файлов: %d</string>
     <string name="error_opening_file">Не удалось открыть файл</string>
     <string name="refresh">Обновить</string>
+    <string name="scanning_files">Сканирование файлов…</string>
 
     <!-- Widget meta -->
     <string name="folder_label">Папка: %s</string>

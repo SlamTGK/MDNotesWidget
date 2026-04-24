@@ -14,16 +14,14 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 /**
- * Widget that shows a single random note with full scrollable content.
+ * Widget that shows a single random note with full content (as much as fits).
  * Tap the refresh icon to load a different random note.
- * Tap the open icon to open the note in the viewer.
+ * Tap the open icon / content area to open the note in the viewer.
  */
 class NoteListWidgetProvider : AppWidgetProvider() {
 
     companion object {
         const val ACTION_SCROLL_REFRESH = "com.mdnotes.widget.ACTION_SCROLL_REFRESH"
-        const val ACTION_SCROLL_OPEN   = "com.mdnotes.widget.ACTION_SCROLL_OPEN"
-        private const val PREF_SCROLL_URI = "scroll_widget_uri_"
 
         private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
@@ -33,7 +31,9 @@ class NoteListWidgetProvider : AppWidgetProvider() {
                 ComponentName(context, NoteListWidgetProvider::class.java)
             )
             for (id in ids) {
-                scope.launch { updateListWidgetAsync(context, manager, id) }
+                // Show loading state first, then update async
+                showLoading(context, manager, id)
+                scope.launch { updateListWidgetSync(context, manager, id) }
             }
         }
 
@@ -42,62 +42,122 @@ class NoteListWidgetProvider : AppWidgetProvider() {
             appWidgetManager: AppWidgetManager,
             widgetId: Int
         ) {
-            scope.launch { updateListWidgetAsync(context, appWidgetManager, widgetId) }
+            showLoading(context, appWidgetManager, widgetId)
+            scope.launch { updateListWidgetSync(context, appWidgetManager, widgetId) }
         }
 
-        private fun updateListWidgetAsync(
+        /**
+         * Show a loading placeholder while the note is being read.
+         */
+        private fun showLoading(
             context: Context,
             appWidgetManager: AppWidgetManager,
             widgetId: Int
         ) {
-            val folderUri = PreferencesManager.getFolderUri(context) ?: return
+            try {
+                val views = RemoteViews(context.packageName, R.layout.widget_list)
+                applyTheme(context, views)
+                views.setTextViewText(R.id.widget_scroll_title, context.getString(R.string.app_name))
+                views.setTextViewText(R.id.widget_scroll_content, "⏳")
+                appWidgetManager.updateAppWidget(widgetId, views)
+            } catch (_: Exception) {}
+        }
 
-            // Pick a random note
-            val noteUri = MarkdownFileScanner.getRandomFile(context, folderUri) ?: return
-            // Save it so open button knows which note
-            context.getSharedPreferences("md_notes_prefs", Context.MODE_PRIVATE)
-                .edit().putString(PREF_SCROLL_URI + widgetId, noteUri.toString()).apply()
-
-            val note = MarkdownFileScanner.readNoteContent(context, noteUri) ?: return
-
-            val views = RemoteViews(context.packageName, R.layout.widget_list)
-
-            // Theme
-            applyTheme(context, views)
-
-            // Title
-            views.setTextViewText(R.id.widget_scroll_title, note.title)
-
-            // Content (plain stripped text)
-            val body = note.content.take(3000)
-            views.setTextViewText(R.id.widget_scroll_content, body)
-
-            // Refresh button → load different random note
-            val refreshIntent = Intent(context, NoteListWidgetProvider::class.java).apply {
-                action = ACTION_SCROLL_REFRESH
-                putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+        /**
+         * Synchronous update — call from a coroutine or background thread.
+         */
+        fun updateListWidgetSync(
+            context: Context,
+            appWidgetManager: AppWidgetManager,
+            widgetId: Int
+        ) {
+            val folderUri = PreferencesManager.getFolderUri(context)
+            if (folderUri == null) {
+                try {
+                    val views = RemoteViews(context.packageName, R.layout.widget_list)
+                    applyTheme(context, views)
+                    views.setTextViewText(R.id.widget_scroll_title, context.getString(R.string.app_name))
+                    views.setTextViewText(R.id.widget_scroll_content, context.getString(R.string.no_folder_selected))
+                    appWidgetManager.updateAppWidget(widgetId, views)
+                } catch (_: Exception) {}
+                return
             }
-            val refreshPi = PendingIntent.getBroadcast(
-                context, widgetId + 50000, refreshIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-            views.setOnClickPendingIntent(R.id.widget_scroll_random_btn, refreshPi)
 
-            // Open button → open note in viewer
-            val openIntent = Intent(context, NoteViewerActivity::class.java).apply {
-                putExtra(NoteViewerActivity.EXTRA_NOTE_URI, noteUri.toString())
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            try {
+                // Pick a random note
+                val noteUri = MarkdownFileScanner.getRandomFile(context, folderUri)
+                if (noteUri == null) {
+                    val views = RemoteViews(context.packageName, R.layout.widget_list)
+                    applyTheme(context, views)
+                    views.setTextViewText(R.id.widget_scroll_title, context.getString(R.string.app_name))
+                    views.setTextViewText(R.id.widget_scroll_content, context.getString(R.string.no_notes_found))
+                    appWidgetManager.updateAppWidget(widgetId, views)
+                    return
+                }
+
+                val note = MarkdownFileScanner.readNoteContent(context, noteUri) ?: return
+
+                val views = RemoteViews(context.packageName, R.layout.widget_list)
+                applyTheme(context, views)
+
+                // Title
+                views.setTextViewText(R.id.widget_scroll_title, note.title)
+
+                // Content — show as much as possible
+                views.setTextViewText(R.id.widget_scroll_content, note.content.take(4000))
+
+                // Font size
+                val fontSizeParam = PreferencesManager.getFontSize(context)
+                val spValue = when (fontSizeParam) {
+                    PreferencesManager.FONT_SIZE_SMALL  -> 10f
+                    PreferencesManager.FONT_SIZE_LARGE  -> 16f
+                    else                                -> 12f
+                }
+                views.setFloat(R.id.widget_scroll_content, "setTextSize", spValue)
+
+                // Custom text colors
+                val theme = PreferencesManager.getWidgetTheme(context)
+                if (theme == PreferencesManager.THEME_CUSTOM) {
+                    views.setTextColor(R.id.widget_scroll_title, PreferencesManager.getCustomWidgetTitleColor(context))
+                    views.setTextColor(R.id.widget_scroll_content, PreferencesManager.getCustomWidgetTextColor(context))
+                }
+
+                // Refresh button → load different random note
+                val refreshIntent = Intent(context, NoteListWidgetProvider::class.java).apply {
+                    action = ACTION_SCROLL_REFRESH
+                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+                }
+                val refreshPi = PendingIntent.getBroadcast(
+                    context, widgetId + 50000, refreshIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+                views.setOnClickPendingIntent(R.id.widget_scroll_random_btn, refreshPi)
+
+                // Open button → open note in viewer
+                val openIntent = Intent(context, NoteViewerActivity::class.java).apply {
+                    putExtra(NoteViewerActivity.EXTRA_NOTE_URI, noteUri.toString())
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                val openPi = PendingIntent.getActivity(
+                    context, widgetId + 60000, openIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+                views.setOnClickPendingIntent(R.id.widget_scroll_open_btn, openPi)
+
+                // Tap on content area → open note
+                views.setOnClickPendingIntent(R.id.widget_scroll_content, openPi)
+
+                appWidgetManager.updateAppWidget(widgetId, views)
+
+            } catch (e: Exception) {
+                try {
+                    val views = RemoteViews(context.packageName, R.layout.widget_list)
+                    applyTheme(context, views)
+                    views.setTextViewText(R.id.widget_scroll_title, context.getString(R.string.app_name))
+                    views.setTextViewText(R.id.widget_scroll_content, context.getString(R.string.no_notes_found))
+                    appWidgetManager.updateAppWidget(widgetId, views)
+                } catch (_: Exception) {}
             }
-            val openPi = PendingIntent.getActivity(
-                context, widgetId + 60000, openIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-            views.setOnClickPendingIntent(R.id.widget_scroll_open_btn, openPi)
-
-            // Tap on content area → open note
-            views.setOnClickPendingIntent(R.id.widget_scroll_content, openPi)
-
-            appWidgetManager.updateAppWidget(widgetId, views)
         }
 
         private fun applyTheme(context: Context, views: RemoteViews) {
@@ -124,8 +184,15 @@ class NoteListWidgetProvider : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray
     ) {
-        for (widgetId in appWidgetIds) {
-            updateListWidget(context, appWidgetManager, widgetId)
+        val pendingResult = goAsync()
+        scope.launch {
+            try {
+                for (widgetId in appWidgetIds) {
+                    updateListWidgetSync(context, appWidgetManager, widgetId)
+                }
+            } finally {
+                pendingResult.finish()
+            }
         }
     }
 
@@ -138,7 +205,14 @@ class NoteListWidgetProvider : AppWidgetProvider() {
                     AppWidgetManager.INVALID_APPWIDGET_ID
                 )
                 if (widgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
-                    updateListWidget(context, AppWidgetManager.getInstance(context), widgetId)
+                    val pendingResult = goAsync()
+                    scope.launch {
+                        try {
+                            updateListWidgetSync(context, AppWidgetManager.getInstance(context), widgetId)
+                        } finally {
+                            pendingResult.finish()
+                        }
+                    }
                 }
             }
         }
