@@ -3,8 +3,10 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="?android:colorBackground"
-    android:fitsSystemWindows="true">
+    android:background="?android:colorBackground">
+
+    <!-- fitsSystemWindows removed: we handle insets manually via WindowInsetsCompat
+         in NoteViewerActivity to properly support keyboard resize on Android 11+ -->
 
     <LinearLayout
         android:layout_width="match_parent"

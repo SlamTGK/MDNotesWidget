@@ -37,8 +37,7 @@
             android:label="@string/app_name"
             android:theme="@style/Theme.MDNotesWidget.NoteViewer"
             android:taskAffinity=""
-            android:excludeFromRecents="true"
-            android:windowSoftInputMode="adjustResize" />
+            android:excludeFromRecents="true" />
 
         <!-- History activity -->
         <activity

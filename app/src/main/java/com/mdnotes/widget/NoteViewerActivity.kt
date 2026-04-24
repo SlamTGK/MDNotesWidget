@@ -16,6 +16,9 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -58,6 +61,11 @@ class NoteViewerActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Tell Android we handle insets ourselves (required for proper keyboard handling
+        // on Android 11+ with transparent navigation bar — adjustResize is broken there)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+
         setContentView(R.layout.activity_note_viewer)
 
         toolbar = findViewById(R.id.toolbar)
@@ -69,6 +77,22 @@ class NoteViewerActivity : AppCompatActivity() {
         searchProgress = findViewById(R.id.search_progress)
         searchEmpty = findViewById(R.id.search_empty)
         fabEdit = findViewById(R.id.fab_edit)
+
+        // ── Keyboard-aware layout ──────────────────────────────────────────────
+        // On Android 11+ with transparent nav bar, adjustResize is ignored.
+        // We manually track IME insets and shift the content container up.
+        val rootView = findViewById<View>(android.R.id.content)
+        ViewCompat.setOnApplyWindowInsetsListener(rootView) { view, insets ->
+            val imeHeight = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
+            val navHeight = insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom
+            val statusHeight = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top
+
+            // When keyboard is visible: pad bottom = keyboard height (keyboard is above nav)
+            // When keyboard is hidden: pad bottom = nav bar height
+            val bottomPad = if (imeHeight > 0) imeHeight else navHeight
+            view.setPadding(0, statusHeight, 0, bottomPad)
+            WindowInsetsCompat.CONSUMED
+        }
 
         toolbar.setNavigationOnClickListener { finish() }
         toolbar.setOnMenuItemClickListener { item ->
