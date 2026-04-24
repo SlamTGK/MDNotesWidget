@@ -39,10 +39,13 @@ class NoteViewerActivity : AppCompatActivity() {
     private lateinit var searchPanel: View
     private lateinit var searchEdit: EditText
     private lateinit var searchRecycler: RecyclerView
+    private lateinit var searchProgress: View
+    private lateinit var searchEmpty: TextView
     private val notePages = mutableListOf<MarkdownFileScanner.NoteContent>()
     private val searchResults = mutableListOf<MarkdownFileScanner.NoteContent>()
     private var currentNoteUri: Uri? = null
     private var isSearchMode = false
+    private var searchJob: kotlinx.coroutines.Job? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -54,6 +57,8 @@ class NoteViewerActivity : AppCompatActivity() {
         searchPanel = findViewById(R.id.search_panel)
         searchEdit = findViewById(R.id.search_edit)
         searchRecycler = findViewById(R.id.search_recycler)
+        searchProgress = findViewById(R.id.search_progress)
+        searchEmpty = findViewById(R.id.search_empty)
 
         toolbar.setNavigationOnClickListener { finish() }
         toolbar.setOnMenuItemClickListener { item ->
@@ -170,26 +175,52 @@ class NoteViewerActivity : AppCompatActivity() {
     }
 
     private fun performSearch(query: String) {
+        searchJob?.cancel()
         if (query.length < 2) {
+            searchProgress.visibility = View.GONE
+            searchEmpty.visibility = View.GONE
             searchResults.clear()
             searchRecycler.adapter?.notifyDataSetChanged()
             return
         }
-        lifecycleScope.launch {
+        searchProgress.visibility = View.VISIBLE
+        searchEmpty.visibility = View.GONE
+        searchJob = lifecycleScope.launch {
             val results = withContext(Dispatchers.IO) {
                 val cached = PreferencesManager.getCachedFileUris(this@NoteViewerActivity)
                 cached.mapNotNull { uriStr ->
                     try {
-                        val note = MarkdownFileScanner.readNoteContent(this@NoteViewerActivity, Uri.parse(uriStr))
-                        if (note != null && (note.title.contains(query, ignoreCase = true) || note.content.contains(query, ignoreCase = true))) {
-                            note
+                        val uri = Uri.parse(uriStr)
+                        // Fast path: check filename first (no file open needed)
+                        val fileName = uri.lastPathSegment?.substringAfterLast('/') ?: ""
+                        if (fileName.contains(query, ignoreCase = true)) {
+                            // Return a lightweight stub — full note loaded on click
+                            val docFile = DocumentFile.fromSingleUri(this@NoteViewerActivity, uri)
+                            return@mapNotNull MarkdownFileScanner.NoteContent(
+                                title = fileName.removeSuffix(".md"),
+                                content = "",
+                                rawContent = "",
+                                fileName = fileName,
+                                uri = uri,
+                                lastModified = docFile?.lastModified() ?: 0L,
+                                folderName = fileName
+                            )
+                        }
+                        // Slow path: open file and scan first 4KB
+                        val preview = contentResolver.openInputStream(uri)?.use { stream ->
+                            stream.bufferedReader(Charsets.UTF_8).readText().take(4096)
+                        } ?: return@mapNotNull null
+                        if (preview.contains(query, ignoreCase = true)) {
+                            MarkdownFileScanner.readNoteContent(this@NoteViewerActivity, uri)
                         } else null
                     } catch (e: Exception) { null }
                 }
             }
+            searchProgress.visibility = View.GONE
             searchResults.clear()
             searchResults.addAll(results)
             searchRecycler.adapter?.notifyDataSetChanged()
+            searchEmpty.visibility = if (results.isEmpty()) View.VISIBLE else View.GONE
         }
     }
 
@@ -268,34 +299,62 @@ class NoteViewerActivity : AppCompatActivity() {
             Toast.makeText(this, R.string.no_folder_selected, Toast.LENGTH_SHORT).show()
             return
         }
-        val input = EditText(this).apply {
-            hint = getString(R.string.note_name_hint)
-            setPadding(48, 24, 48, 24)
+
+        // Build dialog with name + body fields
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(48, 16, 48, 8)
         }
+        val nameInput = EditText(this).apply {
+            hint = getString(R.string.note_name_hint)
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+            setSingleLine(true)
+        }
+        val bodyInput = EditText(this).apply {
+            hint = getString(R.string.note_body_hint)
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or
+                    android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES or
+                    android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE
+            minLines = 4
+            gravity = android.view.Gravity.TOP
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = 16 }
+        }
+        container.addView(nameInput)
+        container.addView(bodyInput)
+
         AlertDialog.Builder(this)
             .setTitle(R.string.create_note)
-            .setView(input)
+            .setView(container)
             .setPositiveButton(R.string.create_note) { _, _ ->
-                val name = input.text.toString().trim()
-                if (name.isNotEmpty()) createNote(folderUri, name)
+                val name = nameInput.text.toString().trim()
+                val body = bodyInput.text.toString()
+                if (name.isNotEmpty()) createNote(folderUri, name, body)
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
     }
 
-    private fun createNote(folderUri: Uri, name: String) {
+    private fun createNote(folderUri: Uri, name: String, body: String = "") {
         lifecycleScope.launch {
             val newUri = withContext(Dispatchers.IO) {
                 try {
                     val folder = DocumentFile.fromTreeUri(this@NoteViewerActivity, folderUri)
                     val fileName = if (name.endsWith(".md")) name else "$name.md"
-                    val newFile = folder?.createFile("text/markdown", fileName)
-                    newFile?.uri
+                    val newFile = folder?.createFile("text/markdown", fileName) ?: return@withContext null
+                    // Write body if provided
+                    if (body.isNotBlank()) {
+                        contentResolver.openOutputStream(newFile.uri)?.use { out ->
+                            out.write(body.toByteArray(Charsets.UTF_8))
+                        }
+                    }
+                    newFile.uri
                 } catch (e: Exception) { null }
             }
             if (newUri != null) {
                 Toast.makeText(this@NoteViewerActivity, R.string.note_created, Toast.LENGTH_SHORT).show()
-                // Refresh cache and open new note
                 withContext(Dispatchers.IO) {
                     MarkdownFileScanner.refreshCache(this@NoteViewerActivity, folderUri)
                 }

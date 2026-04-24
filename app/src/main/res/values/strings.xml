@@ -100,7 +100,7 @@
     <string name="saf_permission_lost">Доступ к папке утерян. Выберите заново.</string>
 
     <!-- List widget -->
-    <string name="widget_list_description">Список заметок с пролистыванием</string>
+    <string name="widget_list_description">Показывает случайную заметку с прокруткой всего текста</string>
 
     <!-- Overflow menu -->
     <string name="more_options">Ещё</string>
@@ -126,6 +126,7 @@
     <!-- Create note -->
     <string name="create_note">Создать заметку</string>
     <string name="note_name_hint">Название заметки</string>
+    <string name="note_body_hint">Текст заметки (необязательно)…</string>
     <string name="note_created">Заметка создана</string>
     <string name="error_creating_note">Не удалось создать заметку</string>
 </resources>

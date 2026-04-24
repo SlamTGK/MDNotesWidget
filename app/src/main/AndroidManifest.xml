@@ -75,24 +75,20 @@
                 android:resource="@xml/note_widget_info" />
         </receiver>
 
-        <!-- List/Stack widget receiver -->
+        <!-- Scrollable single-note widget receiver -->
         <receiver
             android:name=".NoteListWidgetProvider"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-                <action android:name="com.mdnotes.widget.ACTION_LIST_REFRESH" />
+                <action android:name="com.mdnotes.widget.ACTION_SCROLL_REFRESH" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/note_list_widget_info" />
         </receiver>
 
-        <!-- RemoteViewsService for list widget -->
-        <service
-            android:name=".NoteListWidgetService"
-            android:exported="false"
-            android:permission="android.permission.BIND_REMOTEVIEWS" />
+
 
     </application>
 </manifest>

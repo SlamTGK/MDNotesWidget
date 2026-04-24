@@ -196,43 +196,77 @@ object MarkdownFileScanner {
     fun extractFrontmatterTags(rawContent: String): Set<String> {
         val tags = mutableSetOf<String>()
 
-        // Parse YAML frontmatter block
-        val fmMatch = REGEX_FRONTMATTER_BLOCK.find(rawContent)
-        if (fmMatch != null) {
-            val yaml = fmMatch.groupValues[1]
+        // Normalize: remove BOM, unify line endings
+        val content = rawContent.trimStart('\uFEFF').replace("\r\n", "\n").replace("\r", "\n")
 
-            // Inline array: tags: [tag1, tag2, "#tag3"]
-            val inlineMatch = Regex("^tags:\\s*\\[(.+?)]", RegexOption.MULTILINE).find(yaml)
-            if (inlineMatch != null) {
-                inlineMatch.groupValues[1]
-                    .split(",")
-                    .map { it.trim().removePrefix("\"").removeSuffix("\"").removePrefix("'").removeSuffix("'").removePrefix("#").trim().lowercase() }
-                    .filter { it.isNotEmpty() }
-                    .forEach { tags.add(it) }
-            } else {
-                // Block list:
-                // tags:
-                //   - tag1
-                val blockMatch = Regex("^tags:\\s*\\n((?:[ \\t]*-[ \\t]+.+\\n?)+)", RegexOption.MULTILINE).find(yaml)
-                blockMatch?.groupValues?.get(1)?.lines()?.forEach { line ->
-                    val tag = line.trim().removePrefix("-").trim()
-                        .removePrefix("\"").removeSuffix("\"")
-                        .removePrefix("'").removeSuffix("'")
-                        .removePrefix("#").trim().lowercase()
-                    if (tag.isNotEmpty()) tags.add(tag)
+        // Frontmatter must start at position 0 (or after BOM)
+        if (!content.startsWith("---")) {
+            // No frontmatter — only inline hashtags
+            Regex("#([\\w\\-/а-яёА-ЯЁ]+)").findAll(content).forEach {
+                tags.add(it.groupValues[1].lowercase())
+            }
+            return tags
+        }
+
+        // Find closing ---
+        val closingIdx = content.indexOf("\n---", 3)
+        val yaml = if (closingIdx > 0) content.substring(4, closingIdx) else ""
+        val bodyStart = if (closingIdx > 0) closingIdx + 4 else content.length
+
+        if (yaml.isNotEmpty()) {
+            // Find the "tags:" line
+            val lines = yaml.lines()
+            var tagsLineIdx = -1
+            for ((i, line) in lines.withIndex()) {
+                if (line.trimStart().startsWith("tags:")) {
+                    tagsLineIdx = i
+                    break
+                }
+            }
+
+            if (tagsLineIdx >= 0) {
+                val tagsLine = lines[tagsLineIdx].trimStart().removePrefix("tags:").trim()
+
+                if (tagsLine.startsWith("[")) {
+                    // Inline array: tags: [tag1, tag2]
+                    tagsLine.removeSurrounding("[", "]")
+                        .split(",")
+                        .map { it.trim().removeSurrounding("\"").removeSurrounding("'").removePrefix("#").trim().lowercase() }
+                        .filter { it.isNotEmpty() }
+                        .forEach { tags.add(it) }
+                } else if (tagsLine.isEmpty()) {
+                    // Block list:
+                    // tags:
+                    //   - tag1
+                    var i = tagsLineIdx + 1
+                    while (i < lines.size) {
+                        val trimmed = lines[i].trimStart()
+                        if (!trimmed.startsWith("-")) break
+                        val tag = trimmed.removePrefix("-").trim()
+                            .removeSurrounding("\"").removeSurrounding("'")
+                            .removePrefix("#").trim().lowercase()
+                        if (tag.isNotEmpty()) tags.add(tag)
+                        i++
+                    }
+                } else {
+                    // Single inline value: tags: mytag
+                    tagsLine.split(",", " ")
+                        .map { it.trim().removePrefix("#").trim().lowercase() }
+                        .filter { it.isNotEmpty() }
+                        .forEach { tags.add(it) }
                 }
             }
         }
 
-        // Also extract inline #hashtags from the text body (outside frontmatter)
-        val bodyStart = if (fmMatch != null) fmMatch.range.last + 1 else 0
-        val body = if (bodyStart < rawContent.length) rawContent.substring(bodyStart) else rawContent
+        // Also extract inline #hashtags from body
+        val body = if (bodyStart < content.length) content.substring(bodyStart) else ""
         Regex("#([\\w\\-/а-яёА-ЯЁ]+)").findAll(body).forEach {
             tags.add(it.groupValues[1].lowercase())
         }
 
         return tags
     }
+
 
     /**
      * Extracts image references from markdown content.

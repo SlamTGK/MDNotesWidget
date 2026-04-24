@@ -1,58 +1,92 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/widget_list_root"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_scroll_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
     android:background="@drawable/widget_bg_default"
     android:padding="0dp">
 
-    <!-- Header bar -->
+    <!-- Top bar: title + refresh -->
     <LinearLayout
+        android:id="@+id/scroll_top_bar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:paddingStart="14dp"
-        android:paddingEnd="6dp"
+        android:paddingEnd="4dp"
         android:paddingTop="10dp"
-        android:paddingBottom="6dp">
+        android:paddingBottom="4dp">
 
         <TextView
-            android:id="@+id/widget_list_title"
+            android:id="@+id/widget_scroll_title"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="@string/app_name"
             android:textColor="@color/widget_text_title"
             android:textSize="13sp"
-            android:textStyle="bold" />
+            android:textStyle="bold"
+            android:maxLines="1"
+            android:ellipsize="end" />
 
+        <!-- Random (new note) -->
         <ImageView
-            android:id="@+id/widget_list_refresh"
+            android:id="@+id/widget_scroll_random_btn"
             android:layout_width="28dp"
             android:layout_height="28dp"
             android:src="@drawable/ic_refresh"
             android:padding="4dp"
+            android:layout_marginEnd="2dp"
             android:background="?android:attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/refresh" />
+
+        <!-- Open note -->
+        <ImageView
+            android:id="@+id/widget_scroll_open_btn"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:src="@drawable/ic_chevron_right"
+            android:padding="4dp"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/open_with" />
+
     </LinearLayout>
 
-    <!-- Divider -->
+    <!-- Thin divider -->
     <FrameLayout
+        android:id="@+id/scroll_divider"
         android:layout_width="match_parent"
         android:layout_height="1dp"
+        android:layout_below="@id/scroll_top_bar"
         android:layout_marginStart="14dp"
         android:layout_marginEnd="14dp"
         android:background="@color/widget_divider" />
 
-    <!-- ListView of notes (replaces buggy StackView) -->
-    <ListView
-        android:id="@+id/widget_stack"
+    <!--
+        ScrollView allows the full note content to be scrolled.
+        RemoteViews supports ScrollView as a container.
+    -->
+    <ScrollView
+        android:id="@+id/widget_scroll_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:divider="@color/widget_divider"
-        android:dividerHeight="1dp"
-        android:scrollbars="none" />
+        android:layout_below="@id/scroll_divider"
+        android:fillViewport="true"
+        android:scrollbars="vertical">
 
-</LinearLayout>
+        <TextView
+            android:id="@+id/widget_scroll_content"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingStart="14dp"
+            android:paddingEnd="14dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="14dp"
+            android:textColor="@color/widget_text_content"
+            android:textSize="11sp"
+            android:lineSpacingMultiplier="1.35" />
+
+    </ScrollView>
+
+</RelativeLayout>

@@ -40,12 +40,32 @@
             android:layout_height="1dp"
             android:background="?colorOutlineVariant" />
 
+        <!-- Search progress indicator -->
+        <ProgressBar
+            android:id="@+id/search_progress"
+            style="@style/Widget.AppCompat.ProgressBar.Horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="4dp"
+            android:indeterminate="true"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/search_empty"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/no_results"
+            android:textAlignment="center"
+            android:padding="32dp"
+            android:textColor="?android:colorControlNormal"
+            android:visibility="gone" />
+
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/search_recycler"
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
 
     </LinearLayout>
+
 
     <!-- ViewPager for swipe between random notes -->
     <androidx.viewpager2.widget.ViewPager2
