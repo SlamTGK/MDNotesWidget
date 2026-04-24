@@ -21,10 +21,7 @@ object FileOpener {
                 return
             }
             PreferencesManager.OPEN_WITH_OBSIDIAN -> {
-                val absolutePath = resolveAbsolutePath(fileUri)
-                if (absolutePath != null && tryOpenWithObsidian(context, absolutePath)) {
-                    return
-                }
+                if (tryOpenWithObsidian(context, fileUri)) return
                 Toast.makeText(
                     context,
                     context.getString(R.string.obsidian_not_installed),
@@ -36,7 +33,7 @@ object FileOpener {
         openWithSystemChooser(context, fileUri)
     }
 
-    private fun openInViewer(context: Context, fileUri: Uri) {
+    fun openInViewer(context: Context, fileUri: Uri) {
         val intent = Intent(context, NoteViewerActivity::class.java).apply {
             putExtra(NoteViewerActivity.EXTRA_NOTE_URI, fileUri.toString())
             flags = Intent.FLAG_ACTIVITY_NEW_TASK
@@ -44,29 +41,18 @@ object FileOpener {
         context.startActivity(intent)
     }
 
-    private fun tryOpenWithObsidian(context: Context, absolutePath: String): Boolean {
+    /**
+     * Build and open an Obsidian deep link URI.
+     * Centralized logic — used by both FileOpener and NoteViewerActivity.
+     */
+    fun tryOpenWithObsidian(context: Context, fileUri: Uri): Boolean {
+        val absolutePath = resolveAbsolutePath(fileUri) ?: return false
+        return tryOpenWithObsidianByPath(context, absolutePath)
+    }
+
+    fun tryOpenWithObsidianByPath(context: Context, absolutePath: String): Boolean {
         return try {
-            // Use vault + path parameters for more reliable deep-linking
-            val folderUri = absolutePath.substringBeforeLast('/')
-            val fileName = absolutePath.substringAfterLast('/').removeSuffix(".md")
-
-            // Try to extract vault name from path pattern: /storage/.../VaultName/...
-            // Obsidian vaults are typically top-level folders
-            val pathParts = absolutePath.removePrefix("/storage/emulated/0/").split("/")
-            val vaultName = if (pathParts.size >= 2) pathParts[0] else null
-            val relativePath = if (vaultName != null && pathParts.size >= 2) {
-                pathParts.drop(1).joinToString("/").removeSuffix(".md")
-            } else {
-                fileName
-            }
-
-            val uriBuilder = StringBuilder("obsidian://open?")
-            if (vaultName != null) {
-                uriBuilder.append("vault=${Uri.encode(vaultName)}&")
-            }
-            uriBuilder.append("file=${Uri.encode(relativePath)}")
-
-            val obsidianUri = Uri.parse(uriBuilder.toString())
+            val obsidianUri = buildObsidianUri(absolutePath) ?: return false
             val intent = Intent(Intent.ACTION_VIEW, obsidianUri).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
             }
@@ -77,7 +63,31 @@ object FileOpener {
         }
     }
 
-    private fun openWithSystemChooser(context: Context, fileUri: Uri) {
+    /**
+     * Builds an obsidian://open?vault=...&file=... URI from an absolute file path.
+     */
+    fun buildObsidianUri(absolutePath: String): Uri? {
+        return try {
+            val pathParts = absolutePath.removePrefix("/storage/emulated/0/").split("/")
+            val vaultName = if (pathParts.size >= 2) pathParts[0] else null
+            val relativePath = if (vaultName != null && pathParts.size >= 2) {
+                pathParts.drop(1).joinToString("/").removeSuffix(".md")
+            } else {
+                absolutePath.substringAfterLast('/').removeSuffix(".md")
+            }
+
+            val uriBuilder = StringBuilder("obsidian://open?")
+            if (vaultName != null) {
+                uriBuilder.append("vault=${Uri.encode(vaultName)}&")
+            }
+            uriBuilder.append("file=${Uri.encode(relativePath)}")
+            Uri.parse(uriBuilder.toString())
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    fun openWithSystemChooser(context: Context, fileUri: Uri) {
         for (mimeType in listOf("text/markdown", "text/plain", "*/*")) {
             try {
                 val viewIntent = Intent(Intent.ACTION_VIEW).apply {

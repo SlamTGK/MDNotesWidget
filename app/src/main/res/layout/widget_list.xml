@@ -51,12 +51,28 @@
 
     </LinearLayout>
 
+    <!-- Tag filter status chip -->
+    <TextView
+        android:id="@+id/widget_scroll_tag_chip"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/scroll_top_bar"
+        android:paddingStart="14dp"
+        android:paddingEnd="14dp"
+        android:paddingTop="2dp"
+        android:paddingBottom="2dp"
+        android:textColor="#A78BFA"
+        android:textSize="8sp"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:visibility="gone" />
+
     <!-- Thin divider -->
     <FrameLayout
         android:id="@+id/scroll_divider"
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:layout_below="@id/scroll_top_bar"
+        android:layout_below="@id/widget_scroll_tag_chip"
         android:layout_marginStart="14dp"
         android:layout_marginEnd="14dp"
         android:background="@color/widget_divider" />

@@ -89,35 +89,6 @@ class NoteWidgetProvider : AppWidgetProvider() {
 
         // ── RemoteViews builders ──────────────────────────────────────────────
 
-        private fun applyThemeToViews(context: Context, views: RemoteViews, viewId: Int) {
-            val theme = PreferencesManager.getWidgetTheme(context)
-            when (theme) {
-                PreferencesManager.THEME_CUSTOM -> {
-                    val bgColor = PreferencesManager.getCustomWidgetBgColor(context)
-                    views.setInt(viewId, "setBackgroundColor", bgColor)
-                }
-                else -> {
-                    val bgRes = when (theme) {
-                        PreferencesManager.THEME_DARK -> R.drawable.widget_bg_dark
-                        PreferencesManager.THEME_TRANSPARENT -> R.drawable.widget_bg_transparent
-                        else -> R.drawable.widget_bg_default
-                    }
-                    views.setInt(viewId, "setBackgroundResource", bgRes)
-                }
-            }
-        }
-
-        private fun applyCustomTextColors(context: Context, views: RemoteViews) {
-            val theme = PreferencesManager.getWidgetTheme(context)
-            if (theme == PreferencesManager.THEME_CUSTOM) {
-                val titleColor = PreferencesManager.getCustomWidgetTitleColor(context)
-                val textColor = PreferencesManager.getCustomWidgetTextColor(context)
-                views.setTextColor(R.id.widget_title, titleColor)
-                views.setTextColor(R.id.widget_content, textColor)
-                views.setTextColor(R.id.widget_meta, (textColor and 0x00FFFFFF) or 0x99000000.toInt())
-            }
-        }
-
         private fun buildNoteViews(
             context: Context,
             widgetId: Int,
@@ -125,7 +96,7 @@ class NoteWidgetProvider : AppWidgetProvider() {
             appWidgetManager: AppWidgetManager? = null
         ): RemoteViews {
             val views = RemoteViews(context.packageName, R.layout.widget_note)
-            applyThemeToViews(context, views, R.id.widget_root)
+            WidgetThemeHelper.applyTheme(context, views, R.id.widget_root)
 
             val truncatedContent = if (note.content.length > 2000) {
                 note.content.take(2000) + "..."
@@ -137,8 +108,9 @@ class NoteWidgetProvider : AppWidgetProvider() {
             views.setTextViewText(R.id.widget_content, truncatedContent)
 
             // Format date and folder name
-            val dateFormat = java.text.SimpleDateFormat("d MMMM yyyy", java.util.Locale.getDefault())
-            val dateString = if (note.lastModified > 0) dateFormat.format(java.util.Date(note.lastModified)) else ""
+            val dateString = if (note.lastModified > 0) {
+                MarkdownFileScanner.dateFormat.get()?.format(java.util.Date(note.lastModified)) ?: ""
+            } else ""
             val metaString = buildString {
                 append(dateString)
                 if (note.folderName.isNotEmpty()) {
@@ -153,6 +125,16 @@ class NoteWidgetProvider : AppWidgetProvider() {
                 views.setViewVisibility(R.id.widget_meta, android.view.View.GONE)
             }
 
+            // Tag filter status chip
+            val tags = PreferencesManager.getTagList(context)
+            if (tags.isNotEmpty()) {
+                val tagText = tags.joinToString(", ") { "#$it" }
+                views.setTextViewText(R.id.widget_tag_chip, "🏷️ $tagText")
+                views.setViewVisibility(R.id.widget_tag_chip, android.view.View.VISIBLE)
+            } else {
+                views.setViewVisibility(R.id.widget_tag_chip, android.view.View.GONE)
+            }
+
             // Pin state
             val isPinned = PreferencesManager.isNotePinned(context, widgetId)
             views.setImageViewResource(
@@ -161,16 +143,14 @@ class NoteWidgetProvider : AppWidgetProvider() {
             )
 
             // Apply font size preference
-            val fontSizeParam = PreferencesManager.getFontSize(context)
-            val spValue = when (fontSizeParam) {
-                PreferencesManager.FONT_SIZE_SMALL -> 10f
-                PreferencesManager.FONT_SIZE_LARGE -> 16f
-                else -> 12f
-            }
+            val spValue = WidgetThemeHelper.getFontSizeSp(context)
             views.setFloat(R.id.widget_content, "setTextSize", spValue)
 
             // Apply custom text colors
-            applyCustomTextColors(context, views)
+            WidgetThemeHelper.applyCustomTextColors(
+                context, views,
+                R.id.widget_title, R.id.widget_content, R.id.widget_meta
+            )
 
             // Calculate maxLines to avoid partial lines
             if (appWidgetManager != null) {
@@ -185,7 +165,8 @@ class NoteWidgetProvider : AppWidgetProvider() {
                     }
 
                     if (heightDp > 0) {
-                        val availableHeightDp = heightDp - 82
+                        val tagChipHeight = if (tags.isNotEmpty()) 18 else 0
+                        val availableHeightDp = heightDp - 82 - tagChipHeight
                         val lineHeightDp = spValue * 1.35f
                         var maxLines = (availableHeightDp / lineHeightDp).toInt()
                         if (maxLines < 1) maxLines = 1
@@ -220,7 +201,7 @@ class NoteWidgetProvider : AppWidgetProvider() {
 
         private fun buildUnconfiguredViews(context: Context, widgetId: Int): RemoteViews {
             val views = RemoteViews(context.packageName, R.layout.widget_unconfigured)
-            applyThemeToViews(context, views, R.id.widget_unconfigured_root)
+            WidgetThemeHelper.applyTheme(context, views, R.id.widget_unconfigured_root)
 
             val intent = Intent(context, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -235,7 +216,7 @@ class NoteWidgetProvider : AppWidgetProvider() {
 
         private fun buildEmptyViews(context: Context, widgetId: Int): RemoteViews {
             val views = RemoteViews(context.packageName, R.layout.widget_empty)
-            applyThemeToViews(context, views, R.id.widget_empty_root)
+            WidgetThemeHelper.applyTheme(context, views, R.id.widget_empty_root)
 
             views.setOnClickPendingIntent(
                 R.id.widget_empty_refresh,
@@ -296,7 +277,6 @@ class NoteWidgetProvider : AppWidgetProvider() {
         }
 
         private fun buildCreateNotePendingIntent(context: Context, widgetId: Int): PendingIntent {
-            // Opens NoteViewerActivity which handles create dialog
             val intent = Intent(context, NoteViewerActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
                 putExtra("action_create", true)

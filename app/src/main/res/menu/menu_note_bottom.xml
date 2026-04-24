@@ -17,6 +17,11 @@
         android:title="@string/favorites" />
 
     <item
+        android:id="@+id/nav_on_this_day"
+        android:icon="@drawable/ic_calendar"
+        android:title="@string/on_this_day" />
+
+    <item
         android:id="@+id/nav_search"
         android:icon="@drawable/ic_search"
         android:title="@string/search_notes" />

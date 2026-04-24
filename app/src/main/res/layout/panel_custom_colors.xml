@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Custom colors panel (shown when custom theme is selected) -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/custom_colors_panel"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:visibility="gone"
+    android:layout_marginTop="12dp">
+
+    <!-- Background color -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="8dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/custom_bg_color"
+            android:textColor="?colorOnSurface"
+            android:textSize="13sp" />
+
+        <View
+            android:id="@+id/color_preview_bg"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:background="#1E1B4B" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_pick_bg_color"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:layout_marginStart="8dp"
+            android:text="@string/pick_color"
+            android:textSize="11sp"
+            style="@style/Widget.Material3.Button.TonalButton" />
+    </LinearLayout>
+
+    <!-- Text color -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="8dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/custom_text_color"
+            android:textColor="?colorOnSurface"
+            android:textSize="13sp" />
+
+        <View
+            android:id="@+id/color_preview_text"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:background="#F8FAFC" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_pick_text_color"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:layout_marginStart="8dp"
+            android:text="@string/pick_color"
+            android:textSize="11sp"
+            style="@style/Widget.Material3.Button.TonalButton" />
+    </LinearLayout>
+
+    <!-- Title color -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/custom_title_color"
+            android:textColor="?colorOnSurface"
+            android:textSize="13sp" />
+
+        <View
+            android:id="@+id/color_preview_title"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:background="#FFFFFF" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_pick_title_color"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:layout_marginStart="8dp"
+            android:text="@string/pick_color"
+            android:textSize="11sp"
+            style="@style/Widget.Material3.Button.TonalButton" />
+    </LinearLayout>
+</LinearLayout>

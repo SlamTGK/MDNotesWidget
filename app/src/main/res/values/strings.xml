@@ -42,14 +42,15 @@
     <string name="interval_30m">30 мин</string>
     <string name="interval_max">24 ч</string>
 
-    <string name="app_version">v2.5</string>
-    <string name="author_credit">MD Notes Widget v2.5\nMade by aristocrat \u2022 @slamtgk</string>
+    <string name="app_version">v3.0</string>
+    <string name="author_credit">MD Notes Widget v3.0\nMade by aristocrat \u2022 @slamtgk</string>
     <string name="actions_section">Управление</string>
 
     <!-- Folder -->
     <string name="select_folder">Выбрать папку</string>
     <string name="folder_path_hint">Папка не выбрана</string>
     <string name="file_count">%d файлов найдено</string>
+    <string name="files_filtered">%1$d из %2$d файлов (%3$s)</string>
 
     <!-- Open with -->
     <string name="open_with">Открыть заметку</string>
@@ -66,6 +67,7 @@
     <string name="error_opening_file">Не удалось открыть файл</string>
     <string name="refresh">Обновить</string>
     <string name="scanning_files">Сканирование файлов…</string>
+    <string name="indexing_tags">Индексация тегов: %1$d / %2$d</string>
 
     <!-- Widget meta -->
     <string name="folder_label">Папка: %s</string>
@@ -130,4 +132,18 @@
     <string name="note_body_hint">Текст заметки (необязательно)…</string>
     <string name="note_created">Заметка создана</string>
     <string name="error_creating_note">Не удалось создать заметку</string>
+
+    <!-- Edit note -->
+    <string name="edit_note">Редактировать</string>
+    <string name="edit_mode_on">Режим редактирования</string>
+    <string name="note_saved">Заметка сохранена</string>
+    <string name="error_saving_note">Не удалось сохранить</string>
+
+    <!-- On This Day -->
+    <string name="on_this_day">В этот день</string>
+    <string name="no_on_this_day">Нет заметок за этот день в прошлые годы</string>
+    <string name="on_this_day_found">Найдено %d заметок «в этот день»</string>
+
+    <!-- Swipe actions -->
+    <string name="removed_from_history">Удалено из истории</string>
 </resources>

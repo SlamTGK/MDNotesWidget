@@ -1,13 +1,17 @@
 package com.mdnotes.widget
 
 import android.content.Context
+import android.graphics.BitmapFactory
 import android.graphics.Typeface
 import android.net.Uri
+import android.provider.DocumentsContract
 import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.style.RelativeSizeSpan
 import android.text.style.StrikethroughSpan
 import android.text.style.StyleSpan
+import android.util.Log
+import android.util.LruCache
 import androidx.documentfile.provider.DocumentFile
 
 /**
@@ -15,6 +19,8 @@ import androidx.documentfile.provider.DocumentFile
  * caches results, reads note content with Markdown processing.
  */
 object MarkdownFileScanner {
+
+    private const val TAG = "MDFileScanner"
 
     // Pre-compiled regex patterns for performance
     private val REGEX_CODE_BLOCK = Regex("```[\\s\\S]*?```")
@@ -47,23 +53,48 @@ object MarkdownFileScanner {
     private val INLINE_STRIKE = Regex("~~(.+?)~~")
     private val INLINE_CODE = Regex("`(.+?)`")
 
+    // For heading detection inside renderMarkdownToSpannable
+    private val REGEX_HEADING_LINE = Regex("^(#{1,6})\\s+(.+)$")
+
     // Regex for extracting image references from markdown
     private val REGEX_IMAGE_REF_MD = Regex("!\\[([^]]*)]\\(([^)]+)\\)")
     private val REGEX_IMAGE_REF_OBSIDIAN = Regex("!\\[\\[([^]]+)]]")
 
+    // Regex for inline hashtags (supports Latin, Cyrillic, and common chars)
+    private val REGEX_INLINE_HASHTAG = Regex("#([\\w\\-/а-яёА-ЯЁ]+)")
+
+    // LRU cache for rendered SpannableStringBuilder (avoids re-rendering on rebind)
+    private val spannableCache = LruCache<String, SpannableStringBuilder>(30)
+
+    // Date formatter (thread-safe via ThreadLocal)
+    val dateFormat: ThreadLocal<java.text.SimpleDateFormat> = object : ThreadLocal<java.text.SimpleDateFormat>() {
+        override fun initialValue() = java.text.SimpleDateFormat("d MMMM yyyy", java.util.Locale.getDefault())
+    }
+
     // ── Public API ────────────────────────────────────────────────────────────
 
+    /**
+     * Scans a folder for .md files using fast SAF ContentResolver queries
+     * instead of the slow DocumentFile.listFiles() approach.
+     */
     fun scanFolder(context: Context, folderUri: Uri): List<Uri> {
-        val root = DocumentFile.fromTreeUri(context, folderUri) ?: return emptyList()
         val blacklist = PreferencesManager.getFolderBlacklist(context).map { it.lowercase() }
         val result = mutableListOf<Uri>()
-        scanRecursive(root, result, blacklist)
+        try {
+            val treeDocId = DocumentsContract.getTreeDocumentId(folderUri)
+            scanRecursiveFast(context, folderUri, treeDocId, result, blacklist)
+        } catch (e: Exception) {
+            // Fallback to slow DocumentFile method
+            Log.w(TAG, "Fast scan failed, falling back to DocumentFile", e)
+            val root = DocumentFile.fromTreeUri(context, folderUri) ?: return emptyList()
+            scanRecursiveSlow(root, result, blacklist)
+        }
         return result
     }
 
     /**
      * Returns a random .md file from the cached list, filtered by tags.
-     * Tag matching: searches for #tag directly in the raw note text.
+     * Uses TagIndexManager for fast tag-based filtering (no file I/O needed).
      * Anti-repeat: excludes recently shown notes.
      */
     fun getRandomFile(context: Context, folderUri: Uri): Uri? {
@@ -75,27 +106,19 @@ object MarkdownFileScanner {
         }
 
         val tags = PreferencesManager.getTagList(context)
+        val logic = PreferencesManager.getTagLogic(context)
 
-        // Filter by tags if set
+        // Filter by tags using the pre-built index
         val eligible: List<String> = if (tags.isEmpty()) {
             cached
         } else {
-            // Normalize: ensure each tag has # prefix for searching
-            val searchPatterns = tags.map { tag ->
-                val clean = tag.removePrefix("#").trim().lowercase()
-                "#$clean"
-            }
-            cached.filter { uriStr ->
-                try {
-                    val uri = Uri.parse(uriStr)
-                    val rawContent = context.contentResolver.openInputStream(uri)?.use { stream ->
-                        stream.bufferedReader(Charsets.UTF_8).readText()
-                    }?.lowercase() ?: return@filter false
-                    // Match if ANY of the search tags is found in the raw content
-                    searchPatterns.any { pattern -> rawContent.contains(pattern) }
-                } catch (e: Exception) {
-                    false
-                }
+            val filtered = TagIndexManager.getFilesForTags(context, tags, logic)
+            if (filtered.isEmpty()) {
+                // Index might be stale — try fallback to direct content check
+                filterByTagsDirect(context, cached, tags, logic)
+            } else {
+                // Only include URIs that are still in the cache (file might have been deleted)
+                filtered.filter { it in cached }
             }
         }
 
@@ -113,12 +136,43 @@ object MarkdownFileScanner {
         return Uri.parse(chosen)
     }
 
+    /**
+     * Refreshes the file cache AND builds the tag index.
+     * Returns the total number of .md files found.
+     */
     fun refreshCache(context: Context, folderUri: Uri): Int {
         val uris = scanFolder(context, folderUri).map { it.toString() }
         PreferencesManager.setCachedFileUris(context, uris)
+        // Build tag index in the same pass
+        TagIndexManager.buildIndex(context, uris)
         return uris.size
     }
 
+    /**
+     * Refreshes cache with progress callback for UI.
+     * Returns (totalFiles, filteredFiles).
+     */
+    fun refreshCacheWithProgress(
+        context: Context,
+        folderUri: Uri,
+        onScanProgress: ((phase: String, current: Int, total: Int) -> Unit)? = null
+    ): Pair<Int, Int> {
+        onScanProgress?.invoke("scan", 0, 0)
+        val uris = scanFolder(context, folderUri).map { it.toString() }
+        PreferencesManager.setCachedFileUris(context, uris)
+
+        onScanProgress?.invoke("index", 0, uris.size)
+        TagIndexManager.buildIndex(context, uris) { current, total ->
+            onScanProgress?.invoke("index", current, total)
+        }
+
+        val tags = PreferencesManager.getTagList(context)
+        val logic = PreferencesManager.getTagLogic(context)
+        val filteredCount = if (tags.isEmpty()) uris.size
+        else TagIndexManager.getFilteredCount(context, tags, logic)
+
+        return Pair(uris.size, filteredCount)
+    }
 
     fun readNoteContent(context: Context, fileUri: Uri): NoteContent? {
         return try {
@@ -152,6 +206,7 @@ object MarkdownFileScanner {
                 imageRefs = imageRefs
             )
         } catch (e: Exception) {
+            Log.w(TAG, "Failed to read note: $fileUri", e)
             null
         }
     }
@@ -168,15 +223,90 @@ object MarkdownFileScanner {
 
     // ── Private helpers ───────────────────────────────────────────────────────
 
-    private fun scanRecursive(dir: DocumentFile, result: MutableList<Uri>, blacklist: List<String>) {
+    /**
+     * Fast recursive scan using ContentResolver.query() — 10-50x faster than DocumentFile.listFiles().
+     */
+    private fun scanRecursiveFast(
+        context: Context,
+        treeUri: Uri,
+        parentDocId: String,
+        result: MutableList<Uri>,
+        blacklist: List<String>
+    ) {
+        val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, parentDocId)
+        val cursor = context.contentResolver.query(
+            childrenUri,
+            arrayOf(
+                DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+                DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+                DocumentsContract.Document.COLUMN_MIME_TYPE
+            ),
+            null, null, null
+        ) ?: return
+
+        cursor.use {
+            while (it.moveToNext()) {
+                val docId = it.getString(0) ?: continue
+                val name = it.getString(1) ?: continue
+                val mimeType = it.getString(2) ?: ""
+
+                if (mimeType == DocumentsContract.Document.MIME_TYPE_DIR) {
+                    if (blacklist.none { bl -> bl.equals(name, ignoreCase = true) }) {
+                        scanRecursiveFast(context, treeUri, docId, result, blacklist)
+                    }
+                } else if (name.endsWith(".md", ignoreCase = true)) {
+                    result.add(DocumentsContract.buildDocumentUriUsingTree(treeUri, docId))
+                }
+            }
+        }
+    }
+
+    /**
+     * Slow fallback scan using DocumentFile (kept for compatibility).
+     */
+    private fun scanRecursiveSlow(dir: DocumentFile, result: MutableList<Uri>, blacklist: List<String>) {
         val dirName = dir.name?.lowercase() ?: ""
         if (blacklist.any { it == dirName }) return
 
         for (file in dir.listFiles()) {
             when {
-                file.isDirectory -> scanRecursive(file, result, blacklist)
+                file.isDirectory -> scanRecursiveSlow(file, result, blacklist)
                 file.isFile && file.name?.endsWith(".md", ignoreCase = true) == true ->
                     result.add(file.uri)
+            }
+        }
+    }
+
+    /**
+     * Fallback tag filtering by reading file content directly.
+     * Used only when tag index is stale or missing.
+     */
+    private fun filterByTagsDirect(
+        context: Context,
+        cached: List<String>,
+        tags: List<String>,
+        logic: String
+    ): List<String> {
+        val searchPatterns = tags.map { tag ->
+            val clean = tag.removePrefix("#").trim().lowercase()
+            "#$clean"
+        }
+
+        return cached.filter { uriStr ->
+            try {
+                val uri = Uri.parse(uriStr)
+                val rawContent = context.contentResolver.openInputStream(uri)?.use { stream ->
+                    stream.bufferedReader(Charsets.UTF_8).readText()
+                }?.lowercase() ?: return@filter false
+
+                when (logic) {
+                    PreferencesManager.TAG_LOGIC_AND ->
+                        searchPatterns.all { pattern -> rawContent.contains(pattern) }
+                    else ->
+                        searchPatterns.any { pattern -> rawContent.contains(pattern) }
+                }
+            } catch (e: Exception) {
+                false
             }
         }
     }
@@ -201,7 +331,7 @@ object MarkdownFileScanner {
         // Frontmatter must start at position 0 (or after BOM)
         if (!content.startsWith("---")) {
             // No frontmatter — only inline hashtags
-            Regex("#([\\w\\-/а-яёА-ЯЁ]+)").findAll(content).forEach {
+            REGEX_INLINE_HASHTAG.findAll(content).forEach {
                 tags.add(it.groupValues[1].lowercase())
             }
             return tags
@@ -259,7 +389,7 @@ object MarkdownFileScanner {
 
         // Also extract inline #hashtags from body
         val body = if (bodyStart < content.length) content.substring(bodyStart) else ""
-        Regex("#([\\w\\-/а-яёА-ЯЁ]+)").findAll(body).forEach {
+        REGEX_INLINE_HASHTAG.findAll(body).forEach {
             tags.add(it.groupValues[1].lowercase())
         }
 
@@ -316,11 +446,14 @@ object MarkdownFileScanner {
     }
 
     /**
-     * Renders markdown to SpannableStringBuilder with formatting
-     * (headings bold+large, bold, italic, strikethrough, checkboxes, lists).
-     * FIXED: spans are preserved — no SpannableStringBuilder(string) reconstruction.
+     * Renders markdown to SpannableStringBuilder with formatting.
+     * Uses LRU cache to avoid re-rendering on RecyclerView rebind.
      */
     fun renderMarkdownToSpannable(text: String): SpannableStringBuilder {
+        // Check cache first
+        val cacheKey = text.hashCode().toString()
+        spannableCache.get(cacheKey)?.let { return SpannableStringBuilder(it) }
+
         val processed = text
             .replace(REGEX_FRONTMATTER, "")
             .replace(REGEX_CODE_BLOCK, "")
@@ -330,7 +463,7 @@ object MarkdownFileScanner {
         val builder = SpannableStringBuilder()
 
         for (line in processed.lines()) {
-            val headingMatch = Regex("^(#{1,6})\\s+(.+)$").find(line)
+            val headingMatch = REGEX_HEADING_LINE.find(line)
             if (headingMatch != null) {
                 val level = headingMatch.groupValues[1].length
                 val content = headingMatch.groupValues[2]
@@ -387,6 +520,9 @@ object MarkdownFileScanner {
             builder.delete(builder.length - 1, builder.length)
         }
 
+        // Store in cache
+        spannableCache.put(cacheKey, SpannableStringBuilder(builder))
+
         return builder
     }
 
@@ -394,11 +530,9 @@ object MarkdownFileScanner {
      * Appends text with inline bold/italic/strikethrough spans to builder.
      */
     private fun appendInlineFormatted(builder: SpannableStringBuilder, text: String) {
-        // Each entry: regex index -> MatchResult?
         val patterns = listOf(INLINE_BOLD_ITALIC, INLINE_BOLD, INLINE_ITALIC, INLINE_STRIKE)
         var remaining = text
         while (remaining.isNotEmpty()) {
-            // Find earliest match across all patterns, keeping track of which pattern it came from
             var earliest: MatchResult? = null
             var earliestIdx = -1
             for ((idx, regex) in patterns.withIndex()) {
@@ -414,12 +548,10 @@ object MarkdownFileScanner {
                 break
             }
 
-            // Append text before the match
             if (earliest.range.first > 0) {
                 builder.append(remaining.substring(0, earliest.range.first))
             }
 
-            // Get inner content (first non-empty capture group)
             val content = earliest.groupValues.drop(1).firstOrNull { it.isNotEmpty() } ?: earliest.value
             val spanStart = builder.length
             builder.append(content)
@@ -435,6 +567,55 @@ object MarkdownFileScanner {
         }
     }
 
+    /**
+     * Load a bitmap with downsampling to avoid OOM on large images.
+     * Decodes to at most [maxWidth] x [maxHeight] pixels.
+     */
+    fun loadBitmapDownsampled(
+        context: Context,
+        uri: Uri,
+        maxWidth: Int = 600,
+        maxHeight: Int = 450
+    ): android.graphics.Bitmap? {
+        return try {
+            // First pass: decode bounds only
+            val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            context.contentResolver.openInputStream(uri)?.use { stream ->
+                BitmapFactory.decodeStream(stream, null, options)
+            }
+
+            // Calculate inSampleSize
+            options.inSampleSize = calculateInSampleSize(options, maxWidth, maxHeight)
+            options.inJustDecodeBounds = false
+
+            // Second pass: decode with downsampling
+            context.contentResolver.openInputStream(uri)?.use { stream ->
+                BitmapFactory.decodeStream(stream, null, options)
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun calculateInSampleSize(options: BitmapFactory.Options, reqWidth: Int, reqHeight: Int): Int {
+        val (height, width) = options.outHeight to options.outWidth
+        var inSampleSize = 1
+        if (height > reqHeight || width > reqWidth) {
+            val halfHeight = height / 2
+            val halfWidth = width / 2
+            while (halfHeight / inSampleSize >= reqHeight && halfWidth / inSampleSize >= reqWidth) {
+                inSampleSize *= 2
+            }
+        }
+        return inSampleSize
+    }
+
+    /**
+     * Clear the spannable render cache.
+     */
+    fun clearSpannableCache() {
+        spannableCache.evictAll()
+    }
 
     // ── Data class ────────────────────────────────────────────────────────────
 

@@ -1,86 +1,105 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
     android:background="?android:colorBackground"
     android:fitsSystemWindows="true">
 
-    <!-- Top bar -->
-    <com.google.android.material.appbar.MaterialToolbar
-        android:id="@+id/toolbar"
-        android:layout_width="match_parent"
-        android:layout_height="?attr/actionBarSize"
-        android:background="?colorSurface"
-        app:title=""
-        app:navigationIcon="@drawable/ic_chevron_right"
-        app:menu="@menu/menu_note_viewer" />
-
-    <!-- Search panel (hidden by default) -->
     <LinearLayout
-        android:id="@+id/search_panel"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:visibility="gone">
+        android:orientation="vertical">
 
-        <EditText
-            android:id="@+id/search_edit"
+        <!-- Top bar -->
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="@string/search_notes"
-            android:padding="16dp"
-            android:inputType="text"
+            android:layout_height="?attr/actionBarSize"
             android:background="?colorSurface"
-            android:textSize="16sp" />
+            app:title=""
+            app:navigationIcon="@drawable/ic_chevron_right"
+            app:menu="@menu/menu_note_viewer" />
 
-        <View
+        <!-- Search panel (hidden by default) -->
+        <LinearLayout
+            android:id="@+id/search_panel"
             android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="?colorOutlineVariant" />
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:visibility="gone">
 
-        <!-- Search progress indicator -->
-        <ProgressBar
-            android:id="@+id/search_progress"
-            style="@style/Widget.AppCompat.ProgressBar.Horizontal"
+            <EditText
+                android:id="@+id/search_edit"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/search_notes"
+                android:padding="16dp"
+                android:inputType="text"
+                android:background="?colorSurface"
+                android:textSize="16sp" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="?colorOutlineVariant" />
+
+            <!-- Search progress indicator -->
+            <ProgressBar
+                android:id="@+id/search_progress"
+                style="@style/Widget.AppCompat.ProgressBar.Horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="4dp"
+                android:indeterminate="true"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/search_empty"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/no_results"
+                android:textAlignment="center"
+                android:padding="32dp"
+                android:textColor="?android:colorControlNormal"
+                android:visibility="gone" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/search_recycler"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+
+        </LinearLayout>
+
+
+        <!-- ViewPager for swipe between random notes -->
+        <androidx.viewpager2.widget.ViewPager2
+            android:id="@+id/viewpager_notes"
             android:layout_width="match_parent"
-            android:layout_height="4dp"
-            android:indeterminate="true"
-            android:visibility="gone" />
+            android:layout_height="0dp"
+            android:layout_weight="1" />
 
-        <TextView
-            android:id="@+id/search_empty"
+        <!-- Bottom bar with actions -->
+        <com.google.android.material.bottomnavigation.BottomNavigationView
+            android:id="@+id/bottom_nav"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/no_results"
-            android:textAlignment="center"
-            android:padding="32dp"
-            android:textColor="?android:colorControlNormal"
-            android:visibility="gone" />
-
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/search_recycler"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent" />
+            android:background="?colorSurface"
+            app:menu="@menu/menu_note_bottom"
+            app:labelVisibilityMode="labeled" />
 
     </LinearLayout>
 
-
-    <!-- ViewPager for swipe between random notes -->
-    <androidx.viewpager2.widget.ViewPager2
-        android:id="@+id/viewpager_notes"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1" />
-
-    <!-- Bottom bar with actions -->
-    <com.google.android.material.bottomnavigation.BottomNavigationView
-        android:id="@+id/bottom_nav"
-        android:layout_width="match_parent"
+    <!-- FAB for markdown editor -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fab_edit"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:background="?colorSurface"
-        app:menu="@menu/menu_note_bottom"
-        app:labelVisibilityMode="labeled" />
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="80dp"
+        android:src="@drawable/ic_add"
+        android:contentDescription="@string/edit_note"
+        app:backgroundTint="?colorPrimary"
+        app:tint="?colorOnPrimary" />
 
-</LinearLayout>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

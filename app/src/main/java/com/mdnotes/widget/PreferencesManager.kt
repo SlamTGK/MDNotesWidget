@@ -140,7 +140,14 @@ object PreferencesManager {
     fun getTagList(context: Context): List<String> {
         val raw = getTagFilter(context)
         if (raw.isBlank()) return emptyList()
-        return raw.split(";", ",").map { it.trim() }.filter { it.isNotEmpty() }
+        return raw.split(";", ",").map { it.trim().removePrefix("#") }.filter { it.isNotEmpty() }
+    }
+
+    /**
+     * Set tag list from a list of strings (used by ChipGroup).
+     */
+    fun setTagList(context: Context, tags: List<String>) {
+        setTagFilter(context, tags.joinToString(", "))
     }
 
     fun getTagLogic(context: Context): String {
@@ -157,6 +164,10 @@ object PreferencesManager {
         val raw = prefs(context).getString("folder_blacklist", "") ?: ""
         if (raw.isBlank()) return emptyList()
         return raw.split(";").map { it.trim() }.filter { it.isNotEmpty() }
+    }
+
+    fun setFolderBlacklist(context: Context, folders: List<String>) {
+        prefs(context).edit().putString("folder_blacklist", folders.joinToString(";")).apply()
     }
 
     fun getFolderBlacklistRaw(context: Context): String {
@@ -177,28 +188,38 @@ object PreferencesManager {
         prefs(context).edit().putBoolean("quiet_hours_enabled", enabled).apply()
     }
 
-    fun getQuietHoursStart(context: Context): Int {
-        return prefs(context).getInt("quiet_hours_start", 23 * 60)
+    /**
+     * Get quiet hours start time as Pair(hour, minute).
+     */
+    fun getQuietHoursStart(context: Context): Pair<Int, Int> {
+        val minutes = prefs(context).getInt("quiet_hours_start", 23 * 60)
+        return Pair(minutes / 60, minutes % 60)
     }
 
-    fun setQuietHoursStart(context: Context, minutesFromMidnight: Int) {
-        prefs(context).edit().putInt("quiet_hours_start", minutesFromMidnight).apply()
+    fun setQuietHoursStart(context: Context, hour: Int, minute: Int) {
+        prefs(context).edit().putInt("quiet_hours_start", hour * 60 + minute).apply()
     }
 
-    fun getQuietHoursEnd(context: Context): Int {
-        return prefs(context).getInt("quiet_hours_end", 7 * 60)
+    /**
+     * Get quiet hours end time as Pair(hour, minute).
+     */
+    fun getQuietHoursEnd(context: Context): Pair<Int, Int> {
+        val minutes = prefs(context).getInt("quiet_hours_end", 7 * 60)
+        return Pair(minutes / 60, minutes % 60)
     }
 
-    fun setQuietHoursEnd(context: Context, minutesFromMidnight: Int) {
-        prefs(context).edit().putInt("quiet_hours_end", minutesFromMidnight).apply()
+    fun setQuietHoursEnd(context: Context, hour: Int, minute: Int) {
+        prefs(context).edit().putInt("quiet_hours_end", hour * 60 + minute).apply()
     }
 
     fun isInQuietHours(context: Context): Boolean {
         if (!isQuietHoursEnabled(context)) return false
         val now = java.util.Calendar.getInstance()
         val currentMinutes = now.get(java.util.Calendar.HOUR_OF_DAY) * 60 + now.get(java.util.Calendar.MINUTE)
-        val start = getQuietHoursStart(context)
-        val end = getQuietHoursEnd(context)
+        val (startH, startM) = getQuietHoursStart(context)
+        val start = startH * 60 + startM
+        val (endH, endM) = getQuietHoursEnd(context)
+        val end = endH * 60 + endM
         return if (start <= end) {
             currentMinutes in start..end
         } else {
@@ -238,7 +259,7 @@ object PreferencesManager {
             for (uri in uris) jsonArray.put(uri)
             getCacheFile(context).writeText(jsonArray.toString())
         } catch (e: Exception) {
-            e.printStackTrace()
+            android.util.Log.e("PreferencesManager", "Failed to save cache", e)
         }
     }
 
@@ -283,6 +304,15 @@ object PreferencesManager {
         writeJsonList(context, "note_history.json", history.take(MAX_HISTORY_SIZE))
     }
 
+    /**
+     * Remove a specific URI from history.
+     */
+    fun removeFromHistory(context: Context, noteUri: String) {
+        val history = getNoteHistory(context).toMutableList()
+        history.remove(noteUri)
+        writeJsonList(context, "note_history.json", history)
+    }
+
     // ── Favorites ────────────────────────────────────────────────────────────
 
     fun getFavorites(context: Context): List<String> {
@@ -305,6 +335,13 @@ object PreferencesManager {
         val favs = getFavorites(context).toMutableList()
         favs.remove(noteUri)
         writeJsonList(context, "favorites.json", favs)
+    }
+
+    /**
+     * Alias for removeFromFavorites (used in swipe actions).
+     */
+    fun removeFavorite(context: Context, noteUri: String) {
+        removeFromFavorites(context, noteUri)
     }
 
     fun toggleFavorite(context: Context, noteUri: String): Boolean {
@@ -349,7 +386,7 @@ object PreferencesManager {
             for (item in list) jsonArray.put(item)
             java.io.File(context.filesDir, filename).writeText(jsonArray.toString())
         } catch (e: Exception) {
-            e.printStackTrace()
+            android.util.Log.e("PreferencesManager", "Failed to write $filename", e)
         }
     }
 

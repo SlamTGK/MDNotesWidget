@@ -11,8 +11,8 @@ android {
         applicationId = "com.mdnotes.widget"
         minSdk = 31
         targetSdk = 36
-        versionCode = 6
-        versionName = "2.5"
+        versionCode = 7
+        versionName = "3.0"
     }
 
     signingConfigs {
@@ -78,6 +78,9 @@ dependencies {
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("com.google.android.material:material:1.12.0")
     implementation("androidx.documentfile:documentfile:1.0.1")
+
+    // CoordinatorLayout (for FAB in NoteViewerActivity)
+    implementation("androidx.coordinatorlayout:coordinatorlayout:1.2.0")
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")

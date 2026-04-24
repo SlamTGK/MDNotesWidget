@@ -23,7 +23,10 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -31,6 +34,7 @@ class NoteViewerActivity : AppCompatActivity() {
 
     companion object {
         const val EXTRA_NOTE_URI = "extra_note_uri"
+        private const val SEARCH_DEBOUNCE_MS = 300L
     }
 
     private lateinit var viewPager: ViewPager2
@@ -41,11 +45,14 @@ class NoteViewerActivity : AppCompatActivity() {
     private lateinit var searchRecycler: RecyclerView
     private lateinit var searchProgress: View
     private lateinit var searchEmpty: TextView
+    private lateinit var fabEdit: FloatingActionButton
     private val notePages = mutableListOf<MarkdownFileScanner.NoteContent>()
     private val searchResults = mutableListOf<MarkdownFileScanner.NoteContent>()
     private var currentNoteUri: Uri? = null
     private var isSearchMode = false
-    private var searchJob: kotlinx.coroutines.Job? = null
+    private var isEditMode = false
+    private var searchJob: Job? = null
+    private var lastSearchQuery = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -59,6 +66,7 @@ class NoteViewerActivity : AppCompatActivity() {
         searchRecycler = findViewById(R.id.search_recycler)
         searchProgress = findViewById(R.id.search_progress)
         searchEmpty = findViewById(R.id.search_empty)
+        fabEdit = findViewById(R.id.fab_edit)
 
         toolbar.setNavigationOnClickListener { finish() }
         toolbar.setOnMenuItemClickListener { item ->
@@ -73,7 +81,7 @@ class NoteViewerActivity : AppCompatActivity() {
                     currentNoteUri?.let { openInObsidian(it) }; true
                 }
                 R.id.action_open_external -> {
-                    currentNoteUri?.let { openWithSystemChooser(it) }; true
+                    currentNoteUri?.let { FileOpener.openWithSystemChooser(this, it) }; true
                 }
                 R.id.action_create_note -> {
                     showCreateNoteDialog(); true
@@ -96,6 +104,8 @@ class NoteViewerActivity : AppCompatActivity() {
                     currentNoteUri = note.uri
                     PreferencesManager.addToNoteHistory(this@NoteViewerActivity, note.uri.toString())
                     updateFavoriteMenuItem(note.uri.toString())
+                    // Exit edit mode when switching notes
+                    if (isEditMode) toggleEditMode()
                 }
                 if (position >= notePages.size - 2) loadMoreNotes()
             }
@@ -103,10 +113,13 @@ class NoteViewerActivity : AppCompatActivity() {
 
         // Bottom navigation
         searchRecycler.layoutManager = LinearLayoutManager(this)
-        searchRecycler.adapter = SearchAdapter()
 
         searchEdit.addTextChangedListener(object : TextWatcher {
-            override fun afterTextChanged(s: Editable?) { performSearch(s?.toString() ?: "") }
+            override fun afterTextChanged(s: Editable?) {
+                val query = s?.toString() ?: ""
+                lastSearchQuery = query
+                performDebouncedSearch(query)
+            }
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
         })
@@ -135,9 +148,17 @@ class NoteViewerActivity : AppCompatActivity() {
                     toggleSearchMode()
                     true
                 }
+                R.id.nav_on_this_day -> {
+                    exitSearchMode()
+                    showOnThisDay()
+                    true
+                }
                 else -> false
             }
         }
+
+        // FAB: toggle edit mode
+        fabEdit.setOnClickListener { toggleEditMode() }
 
         val initialUri = intent.getStringExtra(EXTRA_NOTE_URI)
         if (initialUri != null) {
@@ -152,7 +173,69 @@ class NoteViewerActivity : AppCompatActivity() {
         }
     }
 
-    // ── Search ────────────────────────────────────────────────────────────────
+    // ── Edit mode (Markdown Editor) ──────────────────────────────────────────
+
+    private fun toggleEditMode() {
+        isEditMode = !isEditMode
+        fabEdit.setImageResource(
+            if (isEditMode) R.drawable.ic_chevron_right else R.drawable.ic_add
+        )
+
+        // Find the current page's view holder and toggle editor
+        val currentPos = viewPager.currentItem
+        val recyclerView = viewPager.getChildAt(0) as? RecyclerView ?: return
+        val holder = recyclerView.findViewHolderForAdapterPosition(currentPos) as? NotePagerAdapter.NoteViewHolder ?: return
+
+        if (isEditMode) {
+            val note = notePages.getOrNull(currentPos) ?: return
+            holder.editContent.setText(note.rawContent)
+            holder.editContent.visibility = View.VISIBLE
+            holder.tvContent.visibility = View.GONE
+            holder.editContent.requestFocus()
+            fabEdit.setImageResource(R.drawable.ic_chevron_right)
+            Toast.makeText(this, R.string.edit_mode_on, Toast.LENGTH_SHORT).show()
+        } else {
+            // Save changes
+            val newContent = holder.editContent.text.toString()
+            val note = notePages.getOrNull(currentPos)
+            if (note != null && newContent != note.rawContent) {
+                saveNoteContent(note.uri, newContent, currentPos)
+            }
+            holder.editContent.visibility = View.GONE
+            holder.tvContent.visibility = View.VISIBLE
+            fabEdit.setImageResource(R.drawable.ic_add)
+        }
+    }
+
+    private fun saveNoteContent(uri: Uri, content: String, position: Int) {
+        lifecycleScope.launch {
+            val success = withContext(Dispatchers.IO) {
+                try {
+                    contentResolver.openOutputStream(uri, "wt")?.use { out ->
+                        out.write(content.toByteArray(Charsets.UTF_8))
+                    }
+                    true
+                } catch (e: Exception) {
+                    false
+                }
+            }
+            if (success) {
+                Toast.makeText(this@NoteViewerActivity, R.string.note_saved, Toast.LENGTH_SHORT).show()
+                // Reload the note to refresh preview
+                val updated = withContext(Dispatchers.IO) {
+                    MarkdownFileScanner.readNoteContent(this@NoteViewerActivity, uri)
+                }
+                if (updated != null && position < notePages.size) {
+                    notePages[position] = updated
+                    viewPager.adapter?.notifyItemChanged(position)
+                }
+            } else {
+                Toast.makeText(this@NoteViewerActivity, R.string.error_saving_note, Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    // ── Search (debounced, with highlights) ───────────────────────────────────
 
     private fun toggleSearchMode() {
         if (isSearchMode) exitSearchMode() else enterSearchMode()
@@ -162,6 +245,7 @@ class NoteViewerActivity : AppCompatActivity() {
         isSearchMode = true
         searchPanel.visibility = View.VISIBLE
         viewPager.visibility = View.GONE
+        fabEdit.visibility = View.GONE
         searchEdit.requestFocus()
     }
 
@@ -169,23 +253,29 @@ class NoteViewerActivity : AppCompatActivity() {
         isSearchMode = false
         searchPanel.visibility = View.GONE
         viewPager.visibility = View.VISIBLE
+        fabEdit.visibility = View.VISIBLE
         searchEdit.setText("")
+        lastSearchQuery = ""
         searchResults.clear()
         searchRecycler.adapter?.notifyDataSetChanged()
     }
 
-    private fun performSearch(query: String) {
+    private fun performDebouncedSearch(query: String) {
         searchJob?.cancel()
         if (query.length < 2) {
             searchProgress.visibility = View.GONE
             searchEmpty.visibility = View.GONE
             searchResults.clear()
-            searchRecycler.adapter?.notifyDataSetChanged()
+            updateSearchAdapter()
             return
         }
         searchProgress.visibility = View.VISIBLE
         searchEmpty.visibility = View.GONE
+
         searchJob = lifecycleScope.launch {
+            // Debounce
+            delay(SEARCH_DEBOUNCE_MS)
+
             val results = withContext(Dispatchers.IO) {
                 val cached = PreferencesManager.getCachedFileUris(this@NoteViewerActivity)
                 cached.mapNotNull { uriStr ->
@@ -194,7 +284,6 @@ class NoteViewerActivity : AppCompatActivity() {
                         // Fast path: check filename first (no file open needed)
                         val fileName = uri.lastPathSegment?.substringAfterLast('/') ?: ""
                         if (fileName.contains(query, ignoreCase = true)) {
-                            // Return a lightweight stub — full note loaded on click
                             val docFile = DocumentFile.fromSingleUri(this@NoteViewerActivity, uri)
                             return@mapNotNull MarkdownFileScanner.NoteContent(
                                 title = fileName.removeSuffix(".md"),
@@ -219,8 +308,77 @@ class NoteViewerActivity : AppCompatActivity() {
             searchProgress.visibility = View.GONE
             searchResults.clear()
             searchResults.addAll(results)
-            searchRecycler.adapter?.notifyDataSetChanged()
+            updateSearchAdapter()
             searchEmpty.visibility = if (results.isEmpty()) View.VISIBLE else View.GONE
+        }
+    }
+
+    private fun updateSearchAdapter() {
+        searchRecycler.adapter = NoteListAdapter(
+            items = searchResults,
+            searchQuery = lastSearchQuery,
+            onItemClick = { note ->
+                exitSearchMode()
+                notePages.clear()
+                viewPager.adapter?.notifyDataSetChanged()
+                loadInitialNote(note.uri)
+            }
+        )
+    }
+
+    // ── On This Day ──────────────────────────────────────────────────────────
+
+    private fun showOnThisDay() {
+        lifecycleScope.launch {
+            val notes = withContext(Dispatchers.IO) {
+                val cached = PreferencesManager.getCachedFileUris(this@NoteViewerActivity)
+                val calendar = java.util.Calendar.getInstance()
+                val todayMonth = calendar.get(java.util.Calendar.MONTH)
+                val todayDay = calendar.get(java.util.Calendar.DAY_OF_MONTH)
+                val thisYear = calendar.get(java.util.Calendar.YEAR)
+
+                cached.mapNotNull { uriStr ->
+                    try {
+                        val uri = Uri.parse(uriStr)
+                        val docFile = DocumentFile.fromSingleUri(this@NoteViewerActivity, uri)
+                        val lastMod = docFile?.lastModified() ?: return@mapNotNull null
+                        if (lastMod <= 0) return@mapNotNull null
+
+                        val cal = java.util.Calendar.getInstance().apply { timeInMillis = lastMod }
+                        val fileMonth = cal.get(java.util.Calendar.MONTH)
+                        val fileDay = cal.get(java.util.Calendar.DAY_OF_MONTH)
+                        val fileYear = cal.get(java.util.Calendar.YEAR)
+
+                        // Same day+month but different year
+                        if (fileMonth == todayMonth && fileDay == todayDay && fileYear != thisYear) {
+                            MarkdownFileScanner.readNoteContent(this@NoteViewerActivity, uri)
+                        } else null
+                    } catch (e: Exception) { null }
+                }.sortedByDescending { it.lastModified }
+            }
+
+            if (notes.isEmpty()) {
+                Toast.makeText(this@NoteViewerActivity, R.string.no_on_this_day, Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+
+            // Replace viewpager content with "On This Day" notes
+            notePages.clear()
+            notePages.addAll(notes)
+            viewPager.adapter?.notifyDataSetChanged()
+            viewPager.setCurrentItem(0, false)
+
+            if (notes.isNotEmpty()) {
+                toolbar.title = notes[0].title
+                currentNoteUri = notes[0].uri
+                updateFavoriteMenuItem(notes[0].uri.toString())
+            }
+
+            Toast.makeText(
+                this@NoteViewerActivity,
+                getString(R.string.on_this_day_found, notes.size),
+                Toast.LENGTH_SHORT
+            ).show()
         }
     }
 
@@ -300,7 +458,6 @@ class NoteViewerActivity : AppCompatActivity() {
             return
         }
 
-        // Build dialog with name + body fields
         val container = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(48, 16, 48, 8)
@@ -344,7 +501,6 @@ class NoteViewerActivity : AppCompatActivity() {
                     val folder = DocumentFile.fromTreeUri(this@NoteViewerActivity, folderUri)
                     val fileName = if (name.endsWith(".md")) name else "$name.md"
                     val newFile = folder?.createFile("text/markdown", fileName) ?: return@withContext null
-                    // Write body if provided
                     if (body.isNotBlank()) {
                         contentResolver.openOutputStream(newFile.uri)?.use { out ->
                             out.write(body.toByteArray(Charsets.UTF_8))
@@ -406,46 +562,12 @@ class NoteViewerActivity : AppCompatActivity() {
         }
     }
 
-    // ── Open in Obsidian ──────────────────────────────────────────────────────
+    // ── Open in Obsidian (uses centralized FileOpener) ────────────────────────
 
     private fun openInObsidian(uri: Uri) {
-        val absolutePath = FileOpener.resolveAbsolutePath(uri)
-        if (absolutePath != null) {
-            try {
-                val pathParts = absolutePath.removePrefix("/storage/emulated/0/").split("/")
-                val vaultName = if (pathParts.size >= 2) pathParts[0] else null
-                val relativePath = if (vaultName != null && pathParts.size >= 2) {
-                    pathParts.drop(1).joinToString("/").removeSuffix(".md")
-                } else {
-                    absolutePath.substringAfterLast('/').removeSuffix(".md")
-                }
-                val uriBuilder = StringBuilder("obsidian://open?")
-                if (vaultName != null) uriBuilder.append("vault=${Uri.encode(vaultName)}&")
-                uriBuilder.append("file=${Uri.encode(relativePath)}")
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uriBuilder.toString())).apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                }
-                startActivity(intent)
-                return
-            } catch (_: Exception) {}
+        if (!FileOpener.tryOpenWithObsidian(this, uri)) {
+            Toast.makeText(this, getString(R.string.obsidian_not_installed), Toast.LENGTH_SHORT).show()
         }
-        Toast.makeText(this, getString(R.string.obsidian_not_installed), Toast.LENGTH_SHORT).show()
-    }
-
-    // ── Open with system chooser ──────────────────────────────────────────────
-
-    private fun openWithSystemChooser(uri: Uri) {
-        for (mimeType in listOf("text/markdown", "text/plain", "*/*")) {
-            try {
-                val viewIntent = Intent(Intent.ACTION_VIEW).apply {
-                    setDataAndType(uri, mimeType)
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
-                }
-                startActivity(Intent.createChooser(viewIntent, getString(R.string.open_external)))
-                return
-            } catch (_: Exception) {}
-        }
-        Toast.makeText(this, getString(R.string.error_opening_file), Toast.LENGTH_SHORT).show()
     }
 
     // ── ViewPager Adapter ─────────────────────────────────────────────────────
@@ -456,6 +578,7 @@ class NoteViewerActivity : AppCompatActivity() {
             val tvTitle: TextView = view.findViewById(R.id.tv_note_title)
             val tvMeta: TextView = view.findViewById(R.id.tv_note_meta)
             val tvContent: TextView = view.findViewById(R.id.tv_note_content)
+            val editContent: EditText = view.findViewById(R.id.edit_note_content)
             val imageScroll: View = view.findViewById(R.id.image_scroll)
             val imageContainer: LinearLayout = view.findViewById(R.id.image_container)
             val tvSwipeHint: TextView = view.findViewById(R.id.tv_swipe_hint)
@@ -471,8 +594,9 @@ class NoteViewerActivity : AppCompatActivity() {
             val note = notePages[position]
             holder.tvTitle.text = note.title
 
-            val dateFormat = java.text.SimpleDateFormat("d MMMM yyyy", java.util.Locale.getDefault())
-            val dateString = if (note.lastModified > 0) dateFormat.format(java.util.Date(note.lastModified)) else ""
+            val dateString = if (note.lastModified > 0) {
+                MarkdownFileScanner.dateFormat.get()?.format(java.util.Date(note.lastModified)) ?: ""
+            } else ""
             val metaString = buildString {
                 append(dateString)
                 if (note.folderName.isNotEmpty()) {
@@ -482,51 +606,27 @@ class NoteViewerActivity : AppCompatActivity() {
             }
             holder.tvMeta.text = metaString
 
-            // Rendered markdown content (spans preserved)
-            val spannable = MarkdownFileScanner.renderMarkdownToSpannable(note.rawContent.ifEmpty { note.content })
-            holder.tvContent.text = spannable
+            // Defer heavy spannable rendering to avoid requestLayout() during layout pass
+            holder.itemView.post {
+                val spannable = MarkdownFileScanner.renderMarkdownToSpannable(
+                    note.rawContent.ifEmpty { note.content }
+                )
+                holder.tvContent.text = spannable
+            }
 
-            // Images
-            if (note.imageRefs.isNotEmpty()) {
-                holder.imageScroll.visibility = View.VISIBLE
+            // Editor is hidden by default
+            holder.editContent.visibility = View.GONE
+
+            // Images — set visibility before posting to avoid requestLayout during layout
+            val hasImages = note.imageRefs.isNotEmpty()
+            holder.imageScroll.visibility = if (hasImages) View.VISIBLE else View.GONE
+            if (hasImages) {
                 holder.imageContainer.removeAllViews()
                 loadImages(note, holder.imageContainer)
-            } else {
-                holder.imageScroll.visibility = View.GONE
             }
         }
 
         override fun getItemCount() = notePages.size
-    }
-
-    // ── Search Adapter ────────────────────────────────────────────────────────
-
-    inner class SearchAdapter : RecyclerView.Adapter<SearchAdapter.ViewHolder>() {
-        inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-            val tvTitle: TextView = view.findViewById(R.id.tv_history_title)
-            val tvPreview: TextView = view.findViewById(R.id.tv_history_preview)
-            val tvFolder: TextView = view.findViewById(R.id.tv_history_folder)
-        }
-
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-            val view = LayoutInflater.from(parent.context).inflate(R.layout.item_history, parent, false)
-            return ViewHolder(view)
-        }
-
-        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-            val note = searchResults[position]
-            holder.tvTitle.text = note.title
-            holder.tvPreview.text = note.content.take(120)
-            holder.tvFolder.text = note.folderName
-            holder.itemView.setOnClickListener {
-                exitSearchMode()
-                notePages.clear()
-                viewPager.adapter?.notifyDataSetChanged()
-                loadInitialNote(note.uri)
-            }
-        }
-
-        override fun getItemCount() = searchResults.size
     }
 
     // ── Image loading ─────────────────────────────────────────────────────────
@@ -561,6 +661,7 @@ class NoteViewerActivity : AppCompatActivity() {
 
     /**
      * Tries multiple URI strategies to load an image referenced in markdown.
+     * Uses bitmap downsampling to avoid OOM.
      */
     private fun tryLoadImage(folderUri: Uri, noteUri: Uri, imageRef: String): android.graphics.Bitmap? {
         val treeDocId = DocumentsContract.getTreeDocumentId(folderUri)
@@ -571,26 +672,20 @@ class NoteViewerActivity : AppCompatActivity() {
         if (noteFolderDocId != null) {
             val imageDocId = "$noteFolderDocId/$imageRef"
             val imageUri = DocumentsContract.buildDocumentUriUsingTree(folderUri, imageDocId)
-            loadBitmap(imageUri)?.let { return it }
+            MarkdownFileScanner.loadBitmapDownsampled(this, imageUri)?.let { return it }
         }
 
         // Strategy 2: relative to vault root
         val imageDocId2 = "$treeDocId/$imageRef"
         val imageUri2 = DocumentsContract.buildDocumentUriUsingTree(folderUri, imageDocId2)
-        loadBitmap(imageUri2)?.let { return it }
+        MarkdownFileScanner.loadBitmapDownsampled(this, imageUri2)?.let { return it }
 
         // Strategy 3: search by filename anywhere in vault
         val fileName = imageRef.substringAfterLast('/')
         val root = DocumentFile.fromTreeUri(this, folderUri)
-        return root?.let { findFileRecursive(it, fileName) }?.let { loadBitmap(it.uri) }
-    }
-
-    private fun loadBitmap(uri: Uri): android.graphics.Bitmap? {
-        return try {
-            contentResolver.openInputStream(uri)?.use { stream ->
-                android.graphics.BitmapFactory.decodeStream(stream)
-            }
-        } catch (e: Exception) { null }
+        return root?.let { findFileRecursive(it, fileName) }?.let {
+            MarkdownFileScanner.loadBitmapDownsampled(this, it.uri)
+        }
     }
 
     private fun findFileRecursive(dir: DocumentFile, name: String): DocumentFile? {

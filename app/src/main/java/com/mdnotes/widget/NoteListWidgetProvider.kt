@@ -31,7 +31,6 @@ class NoteListWidgetProvider : AppWidgetProvider() {
                 ComponentName(context, NoteListWidgetProvider::class.java)
             )
             for (id in ids) {
-                // Show loading state first, then update async
                 showLoading(context, manager, id)
                 scope.launch { updateListWidgetSync(context, manager, id) }
             }
@@ -56,9 +55,10 @@ class NoteListWidgetProvider : AppWidgetProvider() {
         ) {
             try {
                 val views = RemoteViews(context.packageName, R.layout.widget_list)
-                applyTheme(context, views)
+                WidgetThemeHelper.applyTheme(context, views, R.id.widget_scroll_root)
                 views.setTextViewText(R.id.widget_scroll_title, context.getString(R.string.app_name))
                 views.setTextViewText(R.id.widget_scroll_content, "⏳")
+                views.setViewVisibility(R.id.widget_scroll_tag_chip, android.view.View.GONE)
                 appWidgetManager.updateAppWidget(widgetId, views)
             } catch (_: Exception) {}
         }
@@ -75,9 +75,10 @@ class NoteListWidgetProvider : AppWidgetProvider() {
             if (folderUri == null) {
                 try {
                     val views = RemoteViews(context.packageName, R.layout.widget_list)
-                    applyTheme(context, views)
+                    WidgetThemeHelper.applyTheme(context, views, R.id.widget_scroll_root)
                     views.setTextViewText(R.id.widget_scroll_title, context.getString(R.string.app_name))
                     views.setTextViewText(R.id.widget_scroll_content, context.getString(R.string.no_folder_selected))
+                    views.setViewVisibility(R.id.widget_scroll_tag_chip, android.view.View.GONE)
                     appWidgetManager.updateAppWidget(widgetId, views)
                 } catch (_: Exception) {}
                 return
@@ -88,9 +89,10 @@ class NoteListWidgetProvider : AppWidgetProvider() {
                 val noteUri = MarkdownFileScanner.getRandomFile(context, folderUri)
                 if (noteUri == null) {
                     val views = RemoteViews(context.packageName, R.layout.widget_list)
-                    applyTheme(context, views)
+                    WidgetThemeHelper.applyTheme(context, views, R.id.widget_scroll_root)
                     views.setTextViewText(R.id.widget_scroll_title, context.getString(R.string.app_name))
                     views.setTextViewText(R.id.widget_scroll_content, context.getString(R.string.no_notes_found))
+                    views.setViewVisibility(R.id.widget_scroll_tag_chip, android.view.View.GONE)
                     appWidgetManager.updateAppWidget(widgetId, views)
                     return
                 }
@@ -98,7 +100,7 @@ class NoteListWidgetProvider : AppWidgetProvider() {
                 val note = MarkdownFileScanner.readNoteContent(context, noteUri) ?: return
 
                 val views = RemoteViews(context.packageName, R.layout.widget_list)
-                applyTheme(context, views)
+                WidgetThemeHelper.applyTheme(context, views, R.id.widget_scroll_root)
 
                 // Title
                 views.setTextViewText(R.id.widget_scroll_title, note.title)
@@ -107,20 +109,24 @@ class NoteListWidgetProvider : AppWidgetProvider() {
                 views.setTextViewText(R.id.widget_scroll_content, note.content.take(4000))
 
                 // Font size
-                val fontSizeParam = PreferencesManager.getFontSize(context)
-                val spValue = when (fontSizeParam) {
-                    PreferencesManager.FONT_SIZE_SMALL  -> 10f
-                    PreferencesManager.FONT_SIZE_LARGE  -> 16f
-                    else                                -> 12f
-                }
+                val spValue = WidgetThemeHelper.getFontSizeSp(context)
                 views.setFloat(R.id.widget_scroll_content, "setTextSize", spValue)
 
-                // Custom text colors
-                val theme = PreferencesManager.getWidgetTheme(context)
-                if (theme == PreferencesManager.THEME_CUSTOM) {
-                    views.setTextColor(R.id.widget_scroll_title, PreferencesManager.getCustomWidgetTitleColor(context))
-                    views.setTextColor(R.id.widget_scroll_content, PreferencesManager.getCustomWidgetTextColor(context))
+                // Tag filter status chip
+                val tags = PreferencesManager.getTagList(context)
+                if (tags.isNotEmpty()) {
+                    val tagText = tags.joinToString(", ") { "#$it" }
+                    views.setTextViewText(R.id.widget_scroll_tag_chip, "🏷️ $tagText")
+                    views.setViewVisibility(R.id.widget_scroll_tag_chip, android.view.View.VISIBLE)
+                } else {
+                    views.setViewVisibility(R.id.widget_scroll_tag_chip, android.view.View.GONE)
                 }
+
+                // Custom text colors
+                WidgetThemeHelper.applyCustomTextColors(
+                    context, views,
+                    R.id.widget_scroll_title, R.id.widget_scroll_content
+                )
 
                 // Refresh button → load different random note
                 val refreshIntent = Intent(context, NoteListWidgetProvider::class.java).apply {
@@ -152,29 +158,12 @@ class NoteListWidgetProvider : AppWidgetProvider() {
             } catch (e: Exception) {
                 try {
                     val views = RemoteViews(context.packageName, R.layout.widget_list)
-                    applyTheme(context, views)
+                    WidgetThemeHelper.applyTheme(context, views, R.id.widget_scroll_root)
                     views.setTextViewText(R.id.widget_scroll_title, context.getString(R.string.app_name))
                     views.setTextViewText(R.id.widget_scroll_content, context.getString(R.string.no_notes_found))
+                    views.setViewVisibility(R.id.widget_scroll_tag_chip, android.view.View.GONE)
                     appWidgetManager.updateAppWidget(widgetId, views)
                 } catch (_: Exception) {}
-            }
-        }
-
-        private fun applyTheme(context: Context, views: RemoteViews) {
-            val theme = PreferencesManager.getWidgetTheme(context)
-            when (theme) {
-                PreferencesManager.THEME_CUSTOM -> {
-                    views.setInt(R.id.widget_scroll_root, "setBackgroundColor",
-                        PreferencesManager.getCustomWidgetBgColor(context))
-                }
-                else -> {
-                    val bgRes = when (theme) {
-                        PreferencesManager.THEME_DARK        -> R.drawable.widget_bg_dark
-                        PreferencesManager.THEME_TRANSPARENT -> R.drawable.widget_bg_transparent
-                        else                                 -> R.drawable.widget_bg_default
-                    }
-                    views.setInt(R.id.widget_scroll_root, "setBackgroundResource", bgRes)
-                }
             }
         }
     }

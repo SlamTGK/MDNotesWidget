@@ -26,8 +26,8 @@
     <string name="font_large">Large</string>
 
     <string name="tag_settings">Tag Filter</string>
-    <string name="tag_hint">e.g. favorites; daily (no # needed)</string>
-    <string name="tag_desc">Multiple tags via ; or ,  — searches note properties</string>
+    <string name="tag_hint">e.g. favorites, daily</string>
+    <string name="tag_desc">Comma-separated tags. Searches #tag in note text</string>
     <string name="tag_logic_label">Filter Logic</string>
     <string name="tag_logic_or">Any tag (OR)</string>
     <string name="tag_logic_and">All tags (AND)</string>
@@ -39,13 +39,14 @@
     <string name="interval_30m">30 min</string>
     <string name="interval_max">24 h</string>
 
-    <string name="app_version">v2.5</string>
-    <string name="author_credit">MD Notes Widget v2.5\nMade by aristocrat \u2022 @slamtgk</string>
+    <string name="app_version">v3.0</string>
+    <string name="author_credit">MD Notes Widget v3.0\nMade by aristocrat \u2022 @slamtgk</string>
     <string name="actions_section">Actions</string>
 
     <string name="select_folder">Select Folder</string>
     <string name="folder_path_hint">No folder selected</string>
     <string name="file_count">%d files found</string>
+    <string name="files_filtered">%1$d of %2$d files (%3$s)</string>
 
     <string name="open_with">Open note</string>
     <string name="obsidian">Obsidian</string>
@@ -59,6 +60,8 @@
     <string name="files_refreshed">Files found: %d</string>
     <string name="error_opening_file">Could not open file</string>
     <string name="refresh">Refresh</string>
+    <string name="scanning_files">Scanning files…</string>
+    <string name="indexing_tags">Indexing tags: %1$d / %2$d</string>
 
     <string name="folder_label">Folder: %s</string>
 
@@ -109,6 +112,21 @@
 
     <string name="create_note">Create note</string>
     <string name="note_name_hint">Note name</string>
+    <string name="note_body_hint">Note body (optional)…</string>
     <string name="note_created">Note created</string>
     <string name="error_creating_note">Could not create note</string>
+
+    <!-- Edit note -->
+    <string name="edit_note">Edit</string>
+    <string name="edit_mode_on">Edit mode</string>
+    <string name="note_saved">Note saved</string>
+    <string name="error_saving_note">Could not save note</string>
+
+    <!-- On This Day -->
+    <string name="on_this_day">On This Day</string>
+    <string name="no_on_this_day">No notes from this day in past years</string>
+    <string name="on_this_day_found">Found %d notes from this day</string>
+
+    <!-- Swipe actions -->
+    <string name="removed_from_history">Removed from history</string>
 </resources>

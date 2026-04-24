@@ -1,105 +1,141 @@
 package com.mdnotes.widget
 
-import android.content.Intent
-import android.net.Uri
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.RectF
 import android.os.Bundle
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.google.android.material.appbar.MaterialToolbar
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
+/**
+ * Displays the user's note history with swipe actions:
+ *   ← Swipe left → remove from history
+ *   → Swipe right → open in Obsidian
+ */
 class HistoryActivity : AppCompatActivity() {
 
     private lateinit var recyclerView: RecyclerView
-    private lateinit var tvNoHistory: TextView
+    private lateinit var emptyView: TextView
     private val historyItems = mutableListOf<MarkdownFileScanner.NoteContent>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_history)
+        setContentView(R.layout.activity_list)
+        title = getString(R.string.history)
 
-        val toolbar = findViewById<MaterialToolbar>(R.id.toolbar_history)
-        toolbar.setNavigationOnClickListener { finish() }
-
-        recyclerView = findViewById(R.id.recycler_history)
-        tvNoHistory = findViewById(R.id.tv_no_history)
+        recyclerView = findViewById(R.id.recycler_list)
+        emptyView = findViewById(R.id.tv_empty)
+        emptyView.text = getString(R.string.no_history)
 
         recyclerView.layoutManager = LinearLayoutManager(this)
-        recyclerView.adapter = HistoryAdapter()
-
         loadHistory()
     }
 
     private fun loadHistory() {
-        lifecycleScope.launch {
-            val historyUris = PreferencesManager.getNoteHistory(this@HistoryActivity)
+        val historyUris = PreferencesManager.getNoteHistory(this)
+        historyItems.clear()
 
-            if (historyUris.isEmpty()) {
-                tvNoHistory.visibility = View.VISIBLE
-                recyclerView.visibility = View.GONE
-                return@launch
+        for (uriStr in historyUris) {
+            try {
+                val note = MarkdownFileScanner.readNoteContent(this, android.net.Uri.parse(uriStr))
+                if (note != null) historyItems.add(note)
+            } catch (_: Exception) {}
+        }
+
+        if (historyItems.isEmpty()) {
+            emptyView.visibility = View.VISIBLE
+            recyclerView.visibility = View.GONE
+            return
+        }
+
+        emptyView.visibility = View.GONE
+        recyclerView.visibility = View.VISIBLE
+
+        val adapter = NoteListAdapter(
+            items = historyItems,
+            onItemClick = { note ->
+                FileOpener.openInViewer(this, note.uri)
             }
+        )
+        recyclerView.adapter = adapter
 
-            tvNoHistory.visibility = View.GONE
-            recyclerView.visibility = View.VISIBLE
+        // Swipe actions
+        val touchHelper = ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(
+            0, ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT
+        ) {
+            override fun onMove(rv: RecyclerView, vh: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder) = false
 
-            val notes = withContext(Dispatchers.IO) {
-                historyUris.mapNotNull { uriStr ->
-                    try {
-                        MarkdownFileScanner.readNoteContent(
-                            this@HistoryActivity,
-                            Uri.parse(uriStr)
-                        )
-                    } catch (e: Exception) {
-                        null
+            override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
+                val pos = viewHolder.adapterPosition
+                val note = historyItems[pos]
+
+                when (direction) {
+                    ItemTouchHelper.LEFT -> {
+                        // Remove from history
+                        PreferencesManager.removeFromHistory(this@HistoryActivity, note.uri.toString())
+                        historyItems.removeAt(pos)
+                        recyclerView.adapter?.notifyItemRemoved(pos)
+                        Toast.makeText(this@HistoryActivity, R.string.removed_from_history, Toast.LENGTH_SHORT).show()
+                        if (historyItems.isEmpty()) {
+                            emptyView.visibility = View.VISIBLE
+                            recyclerView.visibility = View.GONE
+                        }
+                    }
+                    ItemTouchHelper.RIGHT -> {
+                        // Open in Obsidian
+                        recyclerView.adapter?.notifyItemChanged(pos) // Reset swipe
+                        if (!FileOpener.tryOpenWithObsidian(this@HistoryActivity, note.uri)) {
+                            Toast.makeText(this@HistoryActivity, R.string.obsidian_not_installed, Toast.LENGTH_SHORT).show()
+                        }
                     }
                 }
             }
 
-            historyItems.clear()
-            historyItems.addAll(notes)
-            recyclerView.adapter?.notifyDataSetChanged()
-        }
-    }
+            override fun onChildDraw(
+                c: Canvas, rv: RecyclerView, viewHolder: RecyclerView.ViewHolder,
+                dX: Float, dY: Float, actionState: Int, isCurrentlyActive: Boolean
+            ) {
+                val itemView = viewHolder.itemView
+                val paint = Paint()
+                val radius = 12f * resources.displayMetrics.density
 
-    inner class HistoryAdapter : RecyclerView.Adapter<HistoryAdapter.ViewHolder>() {
-
-        inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-            val tvTitle: TextView = view.findViewById(R.id.tv_history_title)
-            val tvPreview: TextView = view.findViewById(R.id.tv_history_preview)
-            val tvFolder: TextView = view.findViewById(R.id.tv_history_folder)
-        }
-
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-            val view = LayoutInflater.from(parent.context)
-                .inflate(R.layout.item_history, parent, false)
-            return ViewHolder(view)
-        }
-
-        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-            val note = historyItems[position]
-            holder.tvTitle.text = note.title
-            holder.tvPreview.text = note.content.take(100)
-            holder.tvFolder.text = if (note.folderName.isNotEmpty()) {
-                getString(R.string.folder_label, note.folderName)
-            } else ""
-
-            holder.itemView.setOnClickListener {
-                val intent = Intent(this@HistoryActivity, NoteViewerActivity::class.java).apply {
-                    putExtra(NoteViewerActivity.EXTRA_NOTE_URI, note.uri.toString())
+                if (dX > 0) {
+                    // Swipe right — Obsidian (purple)
+                    paint.color = 0xFF7C3AED.toInt()
+                    val rect = RectF(
+                        itemView.left.toFloat(), itemView.top.toFloat(),
+                        itemView.left + dX, itemView.bottom.toFloat()
+                    )
+                    c.drawRoundRect(rect, radius, radius, paint)
+                    // Text label
+                    paint.color = Color.WHITE
+                    paint.textSize = 14f * resources.displayMetrics.density
+                    paint.textAlign = Paint.Align.LEFT
+                    c.drawText("Obsidian", itemView.left + 24f * resources.displayMetrics.density,
+                        (itemView.top + itemView.bottom) / 2f + 5f * resources.displayMetrics.density, paint)
+                } else if (dX < 0) {
+                    // Swipe left — delete (red)
+                    paint.color = 0xFFEF4444.toInt()
+                    val rect = RectF(
+                        itemView.right + dX, itemView.top.toFloat(),
+                        itemView.right.toFloat(), itemView.bottom.toFloat()
+                    )
+                    c.drawRoundRect(rect, radius, radius, paint)
+                    paint.color = Color.WHITE
+                    paint.textSize = 14f * resources.displayMetrics.density
+                    paint.textAlign = Paint.Align.RIGHT
+                    c.drawText("🗑️", itemView.right - 24f * resources.displayMetrics.density,
+                        (itemView.top + itemView.bottom) / 2f + 5f * resources.displayMetrics.density, paint)
                 }
-                startActivity(intent)
+                super.onChildDraw(c, rv, viewHolder, dX, dY, actionState, isCurrentlyActive)
             }
-        }
-
-        override fun getItemCount() = historyItems.size
+        })
+        touchHelper.attachToRecyclerView(recyclerView)
     }
 }
