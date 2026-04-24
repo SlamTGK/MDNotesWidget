@@ -106,19 +106,33 @@ object MarkdownFileScanner {
             PreferencesManager.setCachedFileUris(context, cached)
         }
 
+        // Filter out files that belong to blacklisted folders
+        val blacklist = PreferencesManager.getFolderBlacklist(context)
+        if (blacklist.isNotEmpty()) {
+            val filtered = cached.filter { uriStr ->
+                blacklist.none { bl -> uriStr.contains("/$bl/", ignoreCase = true) ||
+                                       uriStr.contains("%2F${bl}%2F", ignoreCase = true) }
+            }
+            // If cache had blacklisted entries, update it silently
+            if (filtered.size != cached.size) {
+                PreferencesManager.setCachedFileUris(context, filtered)
+                cached = filtered
+            }
+        }
+
         val tags = PreferencesManager.getTagList(context)
 
         // Filter by tags using the pre-built index (OR logic)
         val eligible: List<String> = if (tags.isEmpty()) {
             cached
         } else {
-            val filtered = TagIndexManager.getFilesForTags(context, tags)
-            if (filtered.isEmpty()) {
+            val filtered2 = TagIndexManager.getFilesForTags(context, tags)
+            if (filtered2.isEmpty()) {
                 // Index might be stale — try fallback to direct content check
                 filterByTagsDirect(context, cached, tags)
             } else {
                 // Only include URIs that are still in the cache (file might have been deleted)
-                filtered.filter { it in cached }
+                filtered2.filter { it in cached }
             }
         }
 

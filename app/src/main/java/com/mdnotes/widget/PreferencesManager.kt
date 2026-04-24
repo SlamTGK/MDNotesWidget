@@ -160,10 +160,21 @@ object PreferencesManager {
 
     // ── Folder Blacklist preference ───────────────────────────────────────────
 
+    /** Folders that are always skipped regardless of user settings. */
+    private val SYSTEM_BLACKLIST = listOf(
+        ".stversions",   // Syncthing version history
+        ".obsidian",     // Obsidian config
+        ".trash",        // Obsidian trash
+        ".git",          // Git repository
+        ".github"        // GitHub config
+    )
+
     fun getFolderBlacklist(context: Context): List<String> {
         val raw = prefs(context).getString("folder_blacklist", "") ?: ""
-        if (raw.isBlank()) return emptyList()
-        return raw.split(";").map { it.trim() }.filter { it.isNotEmpty() }
+        val user = if (raw.isBlank()) emptyList()
+                   else raw.split(";").map { it.trim() }.filter { it.isNotEmpty() }
+        // Merge user list with built-in system blacklist (deduplicated)
+        return (SYSTEM_BLACKLIST + user).distinct()
     }
 
     fun setFolderBlacklist(context: Context, folders: List<String>) {

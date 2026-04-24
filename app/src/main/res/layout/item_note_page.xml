@@ -2,7 +2,8 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="?android:colorBackground">
+    android:background="?android:colorBackground"
+    android:fillViewport="true">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -67,6 +68,7 @@
             android:id="@+id/edit_note_content"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:minHeight="400dp"
             android:visibility="gone"
             android:textColor="?colorOnSurface"
             android:textSize="14sp"
@@ -74,9 +76,9 @@
             android:fontFamily="monospace"
             android:inputType="textMultiLine|textNoSuggestions"
             android:gravity="top|start"
-            android:minLines="10"
             android:background="@android:color/transparent"
-            android:padding="0dp" />
+            android:padding="0dp"
+            android:scrollbars="vertical" />
 
         <!-- Swipe hint -->
         <TextView
