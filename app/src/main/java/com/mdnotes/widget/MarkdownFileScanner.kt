@@ -361,51 +361,47 @@ object MarkdownFileScanner {
      * Appends text with inline bold/italic/strikethrough spans to builder.
      */
     private fun appendInlineFormatted(builder: SpannableStringBuilder, text: String) {
+        // Each entry: regex index -> MatchResult?
+        val patterns = listOf(INLINE_BOLD_ITALIC, INLINE_BOLD, INLINE_ITALIC, INLINE_STRIKE)
         var remaining = text
         while (remaining.isNotEmpty()) {
-            // Find the earliest inline marker
-            val biMatch = INLINE_BOLD_ITALIC.find(remaining)
-            val bMatch = INLINE_BOLD.find(remaining)
-            val iMatch = INLINE_ITALIC.find(remaining)
-            val sMatch = INLINE_STRIKE.find(remaining)
+            // Find earliest match across all patterns, keeping track of which pattern it came from
+            var earliest: MatchResult? = null
+            var earliestIdx = -1
+            for ((idx, regex) in patterns.withIndex()) {
+                val m = regex.find(remaining)
+                if (m != null && (earliest == null || m.range.first < earliest.range.first)) {
+                    earliest = m
+                    earliestIdx = idx
+                }
+            }
 
-            val first = listOf(biMatch, bMatch, iMatch, sMatch)
-                .filterNotNull()
-                .minByOrNull { it.range.first }
-
-            if (first == null) {
+            if (earliest == null) {
                 builder.append(remaining)
                 break
             }
 
             // Append text before the match
-            if (first.range.first > 0) {
-                builder.append(remaining.substring(0, first.range.first))
+            if (earliest.range.first > 0) {
+                builder.append(remaining.substring(0, earliest.range.first))
             }
 
-            // Get content and determine span type
-            val content = first.groupValues.drop(1).firstOrNull { it.isNotEmpty() } ?: first.value
+            // Get inner content (first non-empty capture group)
+            val content = earliest.groupValues.drop(1).firstOrNull { it.isNotEmpty() } ?: earliest.value
             val spanStart = builder.length
             builder.append(content)
 
-            when (first.pattern) {
-                INLINE_BOLD_ITALIC.pattern -> {
-                    builder.setSpan(StyleSpan(Typeface.BOLD_ITALIC), spanStart, builder.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                }
-                INLINE_BOLD.pattern -> {
-                    builder.setSpan(StyleSpan(Typeface.BOLD), spanStart, builder.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                }
-                INLINE_ITALIC.pattern -> {
-                    builder.setSpan(StyleSpan(Typeface.ITALIC), spanStart, builder.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                }
-                INLINE_STRIKE.pattern -> {
-                    builder.setSpan(StrikethroughSpan(), spanStart, builder.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                }
+            when (earliestIdx) {
+                0 -> builder.setSpan(StyleSpan(Typeface.BOLD_ITALIC), spanStart, builder.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                1 -> builder.setSpan(StyleSpan(Typeface.BOLD), spanStart, builder.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                2 -> builder.setSpan(StyleSpan(Typeface.ITALIC), spanStart, builder.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                3 -> builder.setSpan(StrikethroughSpan(), spanStart, builder.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
 
-            remaining = remaining.substring(first.range.last + 1)
+            remaining = remaining.substring(earliest.range.last + 1)
         }
     }
+
 
     // ── Data class ────────────────────────────────────────────────────────────
 
