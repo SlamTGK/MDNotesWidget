@@ -53,6 +53,8 @@ class NoteViewerActivity : AppCompatActivity() {
     private var isEditMode = false
     private var searchJob: Job? = null
     private var lastSearchQuery = ""
+    // Safe buffer for editor content — prevents data loss if ViewHolder gets recycled
+    private var pendingEditContent: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -173,37 +175,81 @@ class NoteViewerActivity : AppCompatActivity() {
         }
     }
 
+    override fun onPause() {
+        super.onPause()
+        // Safety net: if user leaves app while editing, save immediately
+        saveEditIfActive()
+    }
+
     // ── Edit mode (Markdown Editor) ──────────────────────────────────────────
 
     private fun toggleEditMode() {
         isEditMode = !isEditMode
         fabEdit.setImageResource(
-            if (isEditMode) R.drawable.ic_chevron_right else R.drawable.ic_add
+            if (isEditMode) R.drawable.ic_chevron_right else R.drawable.ic_edit
         )
 
-        // Find the current page's view holder and toggle editor
         val currentPos = viewPager.currentItem
         val recyclerView = viewPager.getChildAt(0) as? RecyclerView ?: return
-        val holder = recyclerView.findViewHolderForAdapterPosition(currentPos) as? NotePagerAdapter.NoteViewHolder ?: return
+        val holder = recyclerView.findViewHolderForAdapterPosition(currentPos)
+                as? NotePagerAdapter.NoteViewHolder
 
         if (isEditMode) {
             val note = notePages.getOrNull(currentPos) ?: return
-            holder.editContent.setText(note.rawContent)
-            holder.editContent.visibility = View.VISIBLE
-            holder.tvContent.visibility = View.GONE
-            holder.editContent.requestFocus()
-            fabEdit.setImageResource(R.drawable.ic_chevron_right)
+            // Store original content in buffer
+            pendingEditContent = note.rawContent
+            if (holder != null) {
+                holder.editContent.setText(note.rawContent)
+                holder.editContent.visibility = View.VISIBLE
+                holder.tvContent.visibility = View.GONE
+                holder.editContent.requestFocus()
+            }
             Toast.makeText(this, R.string.edit_mode_on, Toast.LENGTH_SHORT).show()
         } else {
-            // Save changes
-            val newContent = holder.editContent.text.toString()
+            // Collect edited text — prefer live holder, fall back to buffer
+            val newContent: String = if (holder != null) {
+                val text = holder.editContent.text.toString()
+                pendingEditContent = text  // sync buffer
+                text
+            } else {
+                pendingEditContent ?: ""
+            }
+
             val note = notePages.getOrNull(currentPos)
-            if (note != null && newContent != note.rawContent) {
+            if (note != null && newContent.isNotEmpty() && newContent != note.rawContent) {
                 saveNoteContent(note.uri, newContent, currentPos)
             }
-            holder.editContent.visibility = View.GONE
-            holder.tvContent.visibility = View.VISIBLE
-            fabEdit.setImageResource(R.drawable.ic_add)
+
+            if (holder != null) {
+                holder.editContent.visibility = View.GONE
+                holder.tvContent.visibility = View.VISIBLE
+            }
+            pendingEditContent = null
+        }
+    }
+
+    /** Called from onPause — saves any unsaved edits so data is never lost. */
+    private fun saveEditIfActive() {
+        if (!isEditMode) return
+        val currentPos = viewPager.currentItem
+        val recyclerView = viewPager.getChildAt(0) as? RecyclerView
+        val holder = recyclerView?.findViewHolderForAdapterPosition(currentPos)
+                as? NotePagerAdapter.NoteViewHolder
+
+        val newContent = if (holder != null) {
+            holder.editContent.text.toString().also { pendingEditContent = it }
+        } else {
+            pendingEditContent ?: return
+        }
+
+        val note = notePages.getOrNull(currentPos) ?: return
+        if (newContent.isNotEmpty() && newContent != note.rawContent) {
+            // Use blocking IO — we're in onPause, no time for coroutines
+            try {
+                contentResolver.openOutputStream(note.uri, "wt")?.use { out ->
+                    out.write(newContent.toByteArray(Charsets.UTF_8))
+                }
+            } catch (_: Exception) {}
         }
     }
 
@@ -614,8 +660,17 @@ class NoteViewerActivity : AppCompatActivity() {
                 holder.tvContent.text = spannable
             }
 
-            // Editor is hidden by default
+            // Editor is hidden by default; add TextWatcher to keep pendingEditContent in sync
             holder.editContent.visibility = View.GONE
+            holder.editContent.addTextChangedListener(object : android.text.TextWatcher {
+                override fun afterTextChanged(s: android.text.Editable?) {
+                    if (isEditMode && holder.bindingAdapterPosition == viewPager.currentItem) {
+                        pendingEditContent = s?.toString()
+                    }
+                }
+                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            })
 
             // Images — set visibility before posting to avoid requestLayout during layout
             val hasImages = note.imageRefs.isNotEmpty()
