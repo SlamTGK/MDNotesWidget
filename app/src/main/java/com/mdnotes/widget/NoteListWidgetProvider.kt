@@ -58,7 +58,7 @@ class NoteListWidgetProvider : AppWidgetProvider() {
                 WidgetThemeHelper.applyTheme(context, views, R.id.widget_scroll_root)
                 views.setTextViewText(R.id.widget_scroll_title, context.getString(R.string.app_name))
                 views.setTextViewText(R.id.widget_scroll_content, "⏳")
-                views.setViewVisibility(R.id.widget_scroll_tag_chip, android.view.View.GONE)
+                views.setViewVisibility(R.id.widget_scroll_meta, android.view.View.GONE)
                 appWidgetManager.updateAppWidget(widgetId, views)
             } catch (_: Exception) {}
         }
@@ -78,7 +78,7 @@ class NoteListWidgetProvider : AppWidgetProvider() {
                     WidgetThemeHelper.applyTheme(context, views, R.id.widget_scroll_root)
                     views.setTextViewText(R.id.widget_scroll_title, context.getString(R.string.app_name))
                     views.setTextViewText(R.id.widget_scroll_content, context.getString(R.string.no_folder_selected))
-                    views.setViewVisibility(R.id.widget_scroll_tag_chip, android.view.View.GONE)
+                    views.setViewVisibility(R.id.widget_scroll_meta, android.view.View.GONE)
                     appWidgetManager.updateAppWidget(widgetId, views)
                 } catch (_: Exception) {}
                 return
@@ -92,7 +92,7 @@ class NoteListWidgetProvider : AppWidgetProvider() {
                     WidgetThemeHelper.applyTheme(context, views, R.id.widget_scroll_root)
                     views.setTextViewText(R.id.widget_scroll_title, context.getString(R.string.app_name))
                     views.setTextViewText(R.id.widget_scroll_content, context.getString(R.string.no_notes_found))
-                    views.setViewVisibility(R.id.widget_scroll_tag_chip, android.view.View.GONE)
+                    views.setViewVisibility(R.id.widget_scroll_meta, android.view.View.GONE)
                     appWidgetManager.updateAppWidget(widgetId, views)
                     return
                 }
@@ -112,14 +112,27 @@ class NoteListWidgetProvider : AppWidgetProvider() {
                 val spValue = WidgetThemeHelper.getFontSizeSp(context)
                 views.setFloat(R.id.widget_scroll_content, "setTextSize", spValue)
 
-                // Tag filter status chip
+                // Meta line: date, folder, active tags — all in one row
                 val tags = PreferencesManager.getTagList(context)
-                if (tags.isNotEmpty()) {
-                    val tagText = tags.joinToString(", ") { "#$it" }
-                    views.setTextViewText(R.id.widget_scroll_tag_chip, "🏷️ $tagText")
-                    views.setViewVisibility(R.id.widget_scroll_tag_chip, android.view.View.VISIBLE)
+                val dateStr = if (note.lastModified > 0)
+                    MarkdownFileScanner.dateFormat.get()?.format(java.util.Date(note.lastModified)) ?: ""
+                else ""
+                val metaStr = buildString {
+                    append(dateStr)
+                    if (note.folderName.isNotEmpty()) {
+                        if (isNotEmpty()) append(", ")
+                        append(note.folderName)
+                    }
+                    if (tags.isNotEmpty()) {
+                        if (isNotEmpty()) append(", ")
+                        append(tags.joinToString(", ") { "#$it" })
+                    }
+                }
+                if (metaStr.isNotEmpty()) {
+                    views.setTextViewText(R.id.widget_scroll_meta, metaStr)
+                    views.setViewVisibility(R.id.widget_scroll_meta, android.view.View.VISIBLE)
                 } else {
-                    views.setViewVisibility(R.id.widget_scroll_tag_chip, android.view.View.GONE)
+                    views.setViewVisibility(R.id.widget_scroll_meta, android.view.View.GONE)
                 }
 
                 // Custom text colors
@@ -161,7 +174,7 @@ class NoteListWidgetProvider : AppWidgetProvider() {
                     WidgetThemeHelper.applyTheme(context, views, R.id.widget_scroll_root)
                     views.setTextViewText(R.id.widget_scroll_title, context.getString(R.string.app_name))
                     views.setTextViewText(R.id.widget_scroll_content, context.getString(R.string.no_notes_found))
-                    views.setViewVisibility(R.id.widget_scroll_tag_chip, android.view.View.GONE)
+                    views.setViewVisibility(R.id.widget_scroll_meta, android.view.View.GONE)
                     appWidgetManager.updateAppWidget(widgetId, views)
                 } catch (_: Exception) {}
             }

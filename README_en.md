@@ -1,5 +1,5 @@
 <div align="center">
-  <h1>MD Notes Widget v3.0</h1>
+  <h1>MD Notes Widget v3.1</h1>
   <p><b>Minimalist, beautiful, and battery-friendly Android widget for your Markdown notes.</b></p>
 
   <p>
@@ -8,7 +8,7 @@
 
   <p>
     <img src="https://img.shields.io/badge/Android-12%2B-green?logo=android" alt="Android 12+" />
-    <img src="https://img.shields.io/badge/version-3.0-blue" alt="Version 3.0" />
+    <img src="https://img.shields.io/badge/version-3.1-blue" alt="Version 3.1" />
     <img src="https://img.shields.io/badge/Kotlin-2.1-purple?logo=kotlin" alt="Kotlin" />
     <img src="https://img.shields.io/badge/Material%20You-Dynamic%20Colors-orange" alt="Material You" />
   </p>
@@ -17,6 +17,22 @@
 ---
 
 **MD Notes Widget** is an Android application that brings your "Second Brain" to your home screen. It randomly selects and beautifully displays Markdown (`.md`) files from a folder on your device. Designed specifically to work seamlessly with local Obsidian Vaults and other offline Markdown editors.
+
+## What's New in v3.1
+
+### 🏷️ Tags Merged into Meta Line
+- Tags now appear on one line with date and folder on the widget
+- Example: `January 1, 2026, Psychology, #favorites`
+- Removed the separate tag row — everything is compact in one place
+
+### ✏️ Edit Button (FAB) Improved
+- Icon changed from `+` to a pencil
+- Button is 2x smaller (mini size, 36dp)
+- Slightly raised for better usability
+
+### 🏷️ Simplified Tag Filter
+- Removed AND/OR logic — now always OR (any matching tag)
+- Tags separated by comma: `favorites, daily`
 
 ## What's New in v3.0
 

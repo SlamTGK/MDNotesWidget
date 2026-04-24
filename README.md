@@ -1,5 +1,5 @@
 <div align="center">
-  <h1>MD Notes Widget v3.0</h1>
+  <h1>MD Notes Widget v3.1</h1>
   <p><b>Минималистичный, красивый и энергоэффективный Android-виджет для ваших Markdown-заметок.</b></p>
 
   <p>
@@ -8,7 +8,7 @@
 
   <p>
     <img src="https://img.shields.io/badge/Android-12%2B-green?logo=android" alt="Android 12+" />
-    <img src="https://img.shields.io/badge/version-3.0-blue" alt="Version 3.0" />
+    <img src="https://img.shields.io/badge/version-3.1-blue" alt="Version 3.1" />
     <img src="https://img.shields.io/badge/Kotlin-2.1-purple?logo=kotlin" alt="Kotlin" />
     <img src="https://img.shields.io/badge/Material%20You-Dynamic%20Colors-orange" alt="Material You" />
   </p>
@@ -17,6 +17,22 @@
 ---
 
 **MD Notes Widget** — Android-приложение, которое переносит ваш «Второй Мозг» прямо на рабочий стол. Случайным образом выбирает и отображает Markdown (`.md`) файлы из любой папки на устройстве. Создано для интеграции с локальными базами **Obsidian** и другими Markdown-редакторами.
+
+## Что нового в v3.1
+
+### 🏷️ Теги в строке мета-данных
+- Теги теперь отображаются в одну строку с датой и папкой прямо на виджете
+- Пример: `1 января 2026, Психология, #избранное`
+- Удалена отдельная строка с тегами — всё компактно в одном месте
+
+### ✏️ Кнопка редактирования (FAB)
+- Заменена иконка с `+` на карандаш (pencil)
+- Кнопка уменьшена в 2 раза (mini размер, 36dp)
+- Немного поднята выше для удобства
+
+### 🏷️ Упрощён фильтр по тегам
+- Убрана логика AND/OR — теперь всегда OR (любой из тегов)
+- Теги через запятую: `избранное, daily`
 
 ## Что нового в v3.0
 

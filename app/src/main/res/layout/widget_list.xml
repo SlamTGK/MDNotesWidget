@@ -51,9 +51,9 @@
 
     </LinearLayout>
 
-    <!-- Tag filter status chip -->
+    <!-- Meta: date, folder, tags -->
     <TextView
-        android:id="@+id/widget_scroll_tag_chip"
+        android:id="@+id/widget_scroll_meta"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_below="@id/scroll_top_bar"
@@ -61,8 +61,8 @@
         android:paddingEnd="14dp"
         android:paddingTop="2dp"
         android:paddingBottom="2dp"
-        android:textColor="#A78BFA"
-        android:textSize="8sp"
+        android:textColor="#999999"
+        android:textSize="9sp"
         android:maxLines="1"
         android:ellipsize="end"
         android:visibility="gone" />
@@ -72,7 +72,7 @@
         android:id="@+id/scroll_divider"
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:layout_below="@id/widget_scroll_tag_chip"
+        android:layout_below="@id/widget_scroll_meta"
         android:layout_marginStart="14dp"
         android:layout_marginEnd="14dp"
         android:background="@color/widget_divider" />

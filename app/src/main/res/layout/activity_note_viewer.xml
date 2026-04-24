@@ -96,10 +96,14 @@
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
         android:layout_marginEnd="16dp"
-        android:layout_marginBottom="80dp"
-        android:src="@drawable/ic_add"
+        android:layout_marginBottom="72dp"
+        android:src="@drawable/ic_edit"
         android:contentDescription="@string/edit_note"
+        app:fabSize="mini"
+        app:fabCustomSize="36dp"
+        app:maxImageSize="18dp"
         app:backgroundTint="?colorPrimary"
-        app:tint="?colorOnPrimary" />
+        app:tint="?colorOnPrimary"
+        app:elevation="4dp" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

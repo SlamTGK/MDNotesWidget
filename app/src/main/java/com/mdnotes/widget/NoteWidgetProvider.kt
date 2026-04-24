@@ -107,15 +107,20 @@ class NoteWidgetProvider : AppWidgetProvider() {
             views.setTextViewText(R.id.widget_title, note.title)
             views.setTextViewText(R.id.widget_content, truncatedContent)
 
-            // Format date and folder name
+            // Format date, folder name, and active tags into one meta line
             val dateString = if (note.lastModified > 0) {
                 MarkdownFileScanner.dateFormat.get()?.format(java.util.Date(note.lastModified)) ?: ""
             } else ""
+            val tags = PreferencesManager.getTagList(context)
             val metaString = buildString {
                 append(dateString)
                 if (note.folderName.isNotEmpty()) {
                     if (isNotEmpty()) append(", ")
                     append(context.getString(R.string.folder_label, note.folderName))
+                }
+                if (tags.isNotEmpty()) {
+                    if (isNotEmpty()) append(", ")
+                    append(tags.joinToString(", ") { "#$it" })
                 }
             }
             if (metaString.isNotEmpty()) {
@@ -123,16 +128,6 @@ class NoteWidgetProvider : AppWidgetProvider() {
                 views.setViewVisibility(R.id.widget_meta, android.view.View.VISIBLE)
             } else {
                 views.setViewVisibility(R.id.widget_meta, android.view.View.GONE)
-            }
-
-            // Tag filter status chip
-            val tags = PreferencesManager.getTagList(context)
-            if (tags.isNotEmpty()) {
-                val tagText = tags.joinToString(", ") { "#$it" }
-                views.setTextViewText(R.id.widget_tag_chip, "🏷️ $tagText")
-                views.setViewVisibility(R.id.widget_tag_chip, android.view.View.VISIBLE)
-            } else {
-                views.setViewVisibility(R.id.widget_tag_chip, android.view.View.GONE)
             }
 
             // Pin state
