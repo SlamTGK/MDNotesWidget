@@ -4,33 +4,46 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
+import android.net.Uri
 import android.os.Bundle
 import android.view.View
+import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.appbar.MaterialToolbar
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Displays the user's note history with swipe actions:
- *   ← Swipe left → remove from history
+ *   ← Swipe left  → remove from history
  *   → Swipe right → open in Obsidian
  */
 class HistoryActivity : AppCompatActivity() {
 
     private lateinit var recyclerView: RecyclerView
     private lateinit var emptyView: TextView
+    private lateinit var progressBar: ProgressBar
     private val historyItems = mutableListOf<MarkdownFileScanner.NoteContent>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_list)
-        title = getString(R.string.history)
+
+        val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
+        toolbar.title = getString(R.string.history)
+        toolbar.setNavigationIcon(R.drawable.ic_chevron_right)
+        toolbar.setNavigationOnClickListener { finish() }
 
         recyclerView = findViewById(R.id.recycler_list)
         emptyView = findViewById(R.id.tv_empty)
+        progressBar = findViewById(R.id.progress_loading)
         emptyView.text = getString(R.string.no_history)
 
         recyclerView.layoutManager = LinearLayoutManager(this)
@@ -38,34 +51,46 @@ class HistoryActivity : AppCompatActivity() {
     }
 
     private fun loadHistory() {
-        val historyUris = PreferencesManager.getNoteHistory(this)
-        historyItems.clear()
-
-        for (uriStr in historyUris) {
-            try {
-                val note = MarkdownFileScanner.readNoteContent(this, android.net.Uri.parse(uriStr))
-                if (note != null) historyItems.add(note)
-            } catch (_: Exception) {}
-        }
-
-        if (historyItems.isEmpty()) {
-            emptyView.visibility = View.VISIBLE
-            recyclerView.visibility = View.GONE
-            return
-        }
-
+        progressBar.visibility = View.VISIBLE
+        recyclerView.visibility = View.GONE
         emptyView.visibility = View.GONE
-        recyclerView.visibility = View.VISIBLE
 
-        val adapter = NoteListAdapter(
-            items = historyItems,
-            onItemClick = { note ->
-                FileOpener.openInViewer(this, note.uri)
+        lifecycleScope.launch {
+            val historyUris = PreferencesManager.getNoteHistory(this@HistoryActivity)
+            historyItems.clear()
+
+            val loaded = withContext(Dispatchers.IO) {
+                historyUris.mapNotNull { uriStr ->
+                    try {
+                        MarkdownFileScanner.readNoteContent(this@HistoryActivity, Uri.parse(uriStr))
+                    } catch (_: Exception) { null }
+                }
             }
-        )
-        recyclerView.adapter = adapter
 
-        // Swipe actions
+            historyItems.addAll(loaded)
+            progressBar.visibility = View.GONE
+
+            if (historyItems.isEmpty()) {
+                emptyView.visibility = View.VISIBLE
+                recyclerView.visibility = View.GONE
+                return@launch
+            }
+
+            emptyView.visibility = View.GONE
+            recyclerView.visibility = View.VISIBLE
+
+            val adapter = NoteListAdapter(
+                items = historyItems,
+                onItemClick = { note ->
+                    FileOpener.openInViewer(this@HistoryActivity, note.uri)
+                }
+            )
+            recyclerView.adapter = adapter
+            attachSwipeHelper()
+        }
+    }
+
+    private fun attachSwipeHelper() {
         val touchHelper = ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(
             0, ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT
         ) {
@@ -73,11 +98,11 @@ class HistoryActivity : AppCompatActivity() {
 
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
                 val pos = viewHolder.adapterPosition
+                if (pos < 0 || pos >= historyItems.size) return
                 val note = historyItems[pos]
 
                 when (direction) {
                     ItemTouchHelper.LEFT -> {
-                        // Remove from history
                         PreferencesManager.removeFromHistory(this@HistoryActivity, note.uri.toString())
                         historyItems.removeAt(pos)
                         recyclerView.adapter?.notifyItemRemoved(pos)
@@ -88,8 +113,7 @@ class HistoryActivity : AppCompatActivity() {
                         }
                     }
                     ItemTouchHelper.RIGHT -> {
-                        // Open in Obsidian
-                        recyclerView.adapter?.notifyItemChanged(pos) // Reset swipe
+                        recyclerView.adapter?.notifyItemChanged(pos)
                         if (!FileOpener.tryOpenWithObsidian(this@HistoryActivity, note.uri)) {
                             Toast.makeText(this@HistoryActivity, R.string.obsidian_not_installed, Toast.LENGTH_SHORT).show()
                         }
@@ -106,31 +130,22 @@ class HistoryActivity : AppCompatActivity() {
                 val radius = 12f * resources.displayMetrics.density
 
                 if (dX > 0) {
-                    // Swipe right — Obsidian (purple)
                     paint.color = 0xFF7C3AED.toInt()
-                    val rect = RectF(
-                        itemView.left.toFloat(), itemView.top.toFloat(),
-                        itemView.left + dX, itemView.bottom.toFloat()
-                    )
+                    val rect = RectF(itemView.left.toFloat(), itemView.top.toFloat(), itemView.left + dX, itemView.bottom.toFloat())
                     c.drawRoundRect(rect, radius, radius, paint)
-                    // Text label
                     paint.color = Color.WHITE
                     paint.textSize = 14f * resources.displayMetrics.density
                     paint.textAlign = Paint.Align.LEFT
                     c.drawText("Obsidian", itemView.left + 24f * resources.displayMetrics.density,
                         (itemView.top + itemView.bottom) / 2f + 5f * resources.displayMetrics.density, paint)
                 } else if (dX < 0) {
-                    // Swipe left — delete (red)
                     paint.color = 0xFFEF4444.toInt()
-                    val rect = RectF(
-                        itemView.right + dX, itemView.top.toFloat(),
-                        itemView.right.toFloat(), itemView.bottom.toFloat()
-                    )
+                    val rect = RectF(itemView.right + dX, itemView.top.toFloat(), itemView.right.toFloat(), itemView.bottom.toFloat())
                     c.drawRoundRect(rect, radius, radius, paint)
                     paint.color = Color.WHITE
                     paint.textSize = 14f * resources.displayMetrics.density
                     paint.textAlign = Paint.Align.RIGHT
-                    c.drawText("🗑️", itemView.right - 24f * resources.displayMetrics.density,
+                    c.drawText("Удалить", itemView.right - 24f * resources.displayMetrics.density,
                         (itemView.top + itemView.bottom) / 2f + 5f * resources.displayMetrics.density, paint)
                 }
                 super.onChildDraw(c, rv, viewHolder, dX, dY, actionState, isCurrentlyActive)

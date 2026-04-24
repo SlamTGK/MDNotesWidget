@@ -375,6 +375,12 @@ class NoteViewerActivity : AppCompatActivity() {
     // ── On This Day ──────────────────────────────────────────────────────────
 
     private fun showOnThisDay() {
+        // Show loading state immediately
+        val originalTitle = toolbar.title
+        toolbar.title = getString(R.string.on_this_day_loading)
+        fabEdit.isEnabled = false
+        bottomNav.isEnabled = false
+
         lifecycleScope.launch {
             val notes = withContext(Dispatchers.IO) {
                 val cached = PreferencesManager.getCachedFileUris(this@NoteViewerActivity)
@@ -403,7 +409,12 @@ class NoteViewerActivity : AppCompatActivity() {
                 }.sortedByDescending { it.lastModified }
             }
 
+            // Restore UI
+            fabEdit.isEnabled = true
+            bottomNav.isEnabled = true
+
             if (notes.isEmpty()) {
+                toolbar.title = originalTitle
                 Toast.makeText(this@NoteViewerActivity, R.string.no_on_this_day, Toast.LENGTH_SHORT).show()
                 return@launch
             }
@@ -414,11 +425,9 @@ class NoteViewerActivity : AppCompatActivity() {
             viewPager.adapter?.notifyDataSetChanged()
             viewPager.setCurrentItem(0, false)
 
-            if (notes.isNotEmpty()) {
-                toolbar.title = notes[0].title
-                currentNoteUri = notes[0].uri
-                updateFavoriteMenuItem(notes[0].uri.toString())
-            }
+            toolbar.title = notes[0].title
+            currentNoteUri = notes[0].uri
+            updateFavoriteMenuItem(notes[0].uri.toString())
 
             Toast.makeText(
                 this@NoteViewerActivity,

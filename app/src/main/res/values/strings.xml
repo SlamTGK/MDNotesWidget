@@ -143,6 +143,7 @@
     <string name="on_this_day">В этот день</string>
     <string name="no_on_this_day">Нет заметок за этот день в прошлые годы</string>
     <string name="on_this_day_found">Найдено %d заметок «в этот день»</string>
+    <string name="on_this_day_loading">⏳ Ищем заметки…</string>
 
     <!-- Swipe actions -->
     <string name="removed_from_history">Удалено из истории</string>
