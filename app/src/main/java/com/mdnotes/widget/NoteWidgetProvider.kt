@@ -83,10 +83,18 @@ open class NoteWidgetProvider : AppWidgetProvider() {
             views.setViewVisibility(meta, android.view.View.VISIBLE)
             val fontSize = WidgetThemeHelper.getFontSizeSp(context)
             views.setTextViewTextSize(text, android.util.TypedValue.COMPLEX_UNIT_SP, fontSize)
+            // Some launchers initially report 0dp. Do not turn an unknown size into a
+            // one-line widget: the XML TextView will naturally fill the available area.
             val options = manager.getAppWidgetOptions(id)
-            val height = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 110)
-            val lines = ((height - 70) / (fontSize * context.resources.configuration.fontScale * 1.35f)).toInt().coerceAtLeast(1)
-            if (!expanded) views.setInt(text, "setMaxLines", lines)
+            val minHeight = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0)
+            val maxHeight = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 0)
+            val height = maxOf(minHeight, maxHeight)
+            if (!expanded && height > 0) {
+                val textHeight = (height - 58).coerceAtLeast(1)
+                val lines = (textHeight / (fontSize * context.resources.configuration.fontScale * 1.35f))
+                    .toInt().coerceAtLeast(2)
+                views.setInt(text, "setMaxLines", lines)
+            }
             views.setOnClickPendingIntent(refresh, broadcast(context, id, ACTION_REFRESH))
             views.setImageViewResource(pin, if (PreferencesManager.isNotePinned(context, id)) R.drawable.ic_pin_filled else R.drawable.ic_pin_outline)
             views.setOnClickPendingIntent(pin, broadcast(context, id, ACTION_PIN_NOTE))
