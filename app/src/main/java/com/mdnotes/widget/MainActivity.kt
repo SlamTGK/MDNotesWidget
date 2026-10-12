@@ -1,6 +1,5 @@
 package com.mdnotes.widget
 
-import android.app.Activity
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Intent
@@ -20,6 +19,7 @@ import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.chip.Chip
@@ -32,6 +32,29 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class MainActivity : AppCompatActivity() {
+
+    val settingsWidgetId: Int get() = intent?.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID,
+        AppWidgetManager.INVALID_APPWIDGET_ID) ?: AppWidgetManager.INVALID_APPWIDGET_ID
+    private var scanJob: kotlinx.coroutines.Job? = null
+    private val folderPicker = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+        if (uri == null) return@registerForActivityResult
+        try {
+            contentResolver.takePersistableUriPermission(uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+        } catch (e: SecurityException) {
+            try {
+                contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                Toast.makeText(this, R.string.read_only_folder, Toast.LENGTH_LONG).show()
+            } catch (_: SecurityException) {
+                Toast.makeText(this, R.string.saf_permission_lost, Toast.LENGTH_LONG).show()
+                return@registerForActivityResult
+            }
+        }
+        scanJob?.cancel()
+        PreferencesManager.setFolderUri(this, uri)
+        tvFolderPath.text = uri.lastPathSegment?.replace("primary:", "/") ?: uri.toString()
+        triggerRefreshFiles()
+    }
 
     companion object {
         private const val REQUEST_FOLDER = 1001
@@ -104,14 +127,22 @@ class MainActivity : AppCompatActivity() {
         setupQuietHoursSection()
         setupCustomColorsSection()
         setupActionButtons()
+        setupAdvancedSettings()
+        findViewById<TextView>(R.id.tv_author_credit).text = getString(R.string.author_credit_version, BuildConfig.VERSION_NAME)
+        findViewById<TextView>(R.id.tv_settings_scope).text = if (settingsWidgetId == AppWidgetManager.INVALID_APPWIDGET_ID)
+            getString(R.string.settings_defaults) else getString(R.string.settings_widget, settingsWidgetId)
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { view, insets ->
+            val bars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            view.setPadding(bars.left, bars.top, bars.right, bars.bottom)
+            insets
+        }
     }
 
     // ── Folder ────────────────────────────────────────────────────────────────
 
     private fun setupFolderSection() {
         btnSelectFolder.setOnClickListener {
-            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
-            startActivityForResult(intent, REQUEST_FOLDER)
+            folderPicker.launch(null)
         }
 
         val folderUri = PreferencesManager.getFolderUri(this)
@@ -121,22 +152,6 @@ class MainActivity : AppCompatActivity() {
             tvFolderPath.text = path
             val count = PreferencesManager.getCachedFileUris(this).size
             updateFileCountBadge(count)
-        }
-    }
-
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == REQUEST_FOLDER && resultCode == Activity.RESULT_OK) {
-            val uri = data?.data ?: return
-            contentResolver.takePersistableUriPermission(
-                uri,
-                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-            )
-            PreferencesManager.setFolderUri(this, uri)
-            val path = uri.lastPathSegment?.replace("primary:", "/") ?: uri.toString()
-            tvFolderPath.text = path
-            // Auto-scan
-            triggerRefreshFiles()
         }
     }
 
@@ -166,7 +181,8 @@ class MainActivity : AppCompatActivity() {
     private fun formatInterval(minutes: Int): String {
         return when {
             minutes < 0 -> getString(R.string.interval_off)
-            minutes < 60 -> "${minutes}m"
+            minutes < 60 -> getString(R.string.minutes_format, minutes)
+            minutes % 60 != 0 -> getString(R.string.hours_minutes_format, minutes / 60, minutes % 60)
             else -> {
                 val hours = minutes / 60
                 resources.getQuantityString(R.plurals.hours_format, hours, hours)
@@ -320,7 +336,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupBlacklistSection() {
         editFolderBlacklist.setText(
-            PreferencesManager.getFolderBlacklist(this).joinToString("; ")
+            PreferencesManager.getFolderBlacklistRaw(this)
         )
     }
 
@@ -342,14 +358,16 @@ class MainActivity : AppCompatActivity() {
         }
 
         btnQuietStart.setOnClickListener {
-            showTimePicker(startH, startM) { h, m ->
+            val (h, m) = PreferencesManager.getQuietHoursStart(this)
+            showTimePicker(h, m) { h, m ->
                 PreferencesManager.setQuietHoursStart(this, h, m)
                 btnQuietStart.text = String.format("%02d:%02d", h, m)
             }
         }
 
         btnQuietEnd.setOnClickListener {
-            showTimePicker(endH, endM) { h, m ->
+            val (h, m) = PreferencesManager.getQuietHoursEnd(this)
+            showTimePicker(h, m) { h, m ->
                 PreferencesManager.setQuietHoursEnd(this, h, m)
                 btnQuietEnd.text = String.format("%02d:%02d", h, m)
             }
@@ -380,19 +398,19 @@ class MainActivity : AppCompatActivity() {
         colorPreviewTitle.setBackgroundColor(titleColor)
 
         findViewById<MaterialButton>(R.id.btn_pick_bg_color).setOnClickListener {
-            showColorPicker(bgColor) { color ->
+            showColorPicker(PreferencesManager.getCustomWidgetBgColor(this)) { color ->
                 PreferencesManager.setCustomWidgetBgColor(this, color)
                 colorPreviewBg.setBackgroundColor(color)
             }
         }
         findViewById<MaterialButton>(R.id.btn_pick_text_color).setOnClickListener {
-            showColorPicker(textColor) { color ->
+            showColorPicker(PreferencesManager.getCustomWidgetTextColor(this)) { color ->
                 PreferencesManager.setCustomWidgetTextColor(this, color)
                 colorPreviewText.setBackgroundColor(color)
             }
         }
         findViewById<MaterialButton>(R.id.btn_pick_title_color).setOnClickListener {
-            showColorPicker(titleColor) { color ->
+            showColorPicker(PreferencesManager.getCustomWidgetTitleColor(this)) { color ->
                 PreferencesManager.setCustomWidgetTitleColor(this, color)
                 colorPreviewTitle.setBackgroundColor(color)
             }
@@ -433,11 +451,11 @@ class MainActivity : AppCompatActivity() {
                 setStroke(2, Color.parseColor("#33FFFFFF"))
             }
             currentPreview.background = d
-            currentHexLabel.text = String.format("#%06X", 0xFFFFFF and color)
+            currentHexLabel.text = String.format("#%08X", color)
         }
 
         updatePreview(currentColor)
-        hexInput.setText(String.format("#%06X", 0xFFFFFF and currentColor))
+        hexInput.setText(String.format("#%08X", currentColor))
 
         // Build preset color swatches
         val density = resources.displayMetrics.density
@@ -465,7 +483,7 @@ class MainActivity : AppCompatActivity() {
                 background = d
                 setOnClickListener {
                     updatePreview(preset)
-                    hexInput.setText(String.format("#%06X", 0xFFFFFF and preset))
+                    hexInput.setText(String.format("#%08X", preset))
                     // Refresh all swatch borders
                     for (i in 0 until gridLayout.childCount) {
                         val child = gridLayout.getChildAt(i)
@@ -530,33 +548,26 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun triggerRefreshWidgets() {
-        val manager = AppWidgetManager.getInstance(this)
-
-        // Single-note widgets
-        val singleIds = manager.getAppWidgetIds(
-            ComponentName(this, NoteWidgetProvider::class.java)
-        )
-        for (id in singleIds) {
-            NoteWidgetProvider.updateWidget(this, manager, id)
-        }
-
-        // List widgets
-        NoteListWidgetProvider.updateAllListWidgets(this)
-
+        if (settingsWidgetId == AppWidgetManager.INVALID_APPWIDGET_ID) WidgetUpdateCoordinator.refreshAll(this)
+        else WidgetUpdateCoordinator.refresh(this, settingsWidgetId)
         NoteWidgetProvider.scheduleWork(this)
         Toast.makeText(this, R.string.widget_updated, Toast.LENGTH_SHORT).show()
     }
 
     private fun triggerRefreshFiles() {
+        if (scanJob?.isActive == true) return
         val folderUri = PreferencesManager.getFolderUri(this) ?: return
+        val scanContext = if (settingsWidgetId == AppWidgetManager.INVALID_APPWIDGET_ID) applicationContext
+            else PreferencesManager.widgetContext(this, settingsWidgetId)
 
         scanningIndicator.visibility = View.VISIBLE
         tvScanningStatus.text = getString(R.string.scanning_files)
 
-        lifecycleScope.launch {
+        scanJob = lifecycleScope.launch {
+            try {
             val (totalCount, filteredCount) = withContext(Dispatchers.IO) {
-                MarkdownFileScanner.refreshCacheWithProgress(this@MainActivity, folderUri) { phase, current, total ->
-                    if (phase == "index" && total > 0) {
+                MarkdownFileScanner.refreshCacheWithProgress(scanContext, folderUri) { phase, current, total ->
+                    if (phase == "index" && total > 0 && (current % 25 == 0 || current == total)) {
                         launch(Dispatchers.Main) {
                             tvScanningStatus.text = getString(R.string.indexing_tags, current, total)
                         }
@@ -587,23 +598,24 @@ class MainActivity : AppCompatActivity() {
 
             // Also refresh widgets
             triggerRefreshWidgets()
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (e: Exception) { Toast.makeText(this@MainActivity, R.string.saf_permission_lost, Toast.LENGTH_LONG).show() }
+            finally { scanningIndicator.visibility = View.GONE }
         }
     }
 
     private fun updateFilteredCount() {
         lifecycleScope.launch {
             val tags = PreferencesManager.getTagList(this@MainActivity)
-            val totalCount = PreferencesManager.getCachedFileUris(this@MainActivity).size
-
-            if (tags.isNotEmpty() && totalCount > 0) {
-                val filteredCount = withContext(Dispatchers.IO) {
-                    TagIndexManager.getFilteredCount(this@MainActivity, tags)
+            try {
+                val (totalCount, filteredCount) = withContext(Dispatchers.IO) {
+                    PreferencesManager.getCachedFileUris(this@MainActivity).size to TagIndexManager.getFilteredCount(this@MainActivity, tags)
                 }
                 tvFileCount.text = getString(R.string.files_filtered, filteredCount, totalCount,
                     tags.joinToString(", ") { "#$it" })
-            } else if (totalCount > 0) {
-                tvFileCount.text = getString(R.string.file_count, totalCount)
-            }
+                tvFileCount.visibility = View.VISIBLE
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (e: Exception) { Toast.makeText(this@MainActivity, R.string.storage_error, Toast.LENGTH_LONG).show() }
         }
     }
 
@@ -639,6 +651,61 @@ class MainActivity : AppCompatActivity() {
         if (appWidgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
             val resultIntent = Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
             setResult(RESULT_OK, resultIntent)
+        }
+    }
+
+    private fun setupAdvancedSettings() {
+        findViewById<MaterialButton>(R.id.btn_open_notes).setOnClickListener {
+            startActivity(Intent(this, NoteViewerActivity::class.java).putExtra(NoteViewerActivity.EXTRA_WIDGET_ID, settingsWidgetId))
+        }
+        fun text(id: Int, key: String, default: String = "") {
+            val edit = findViewById<EditText>(id)
+            edit.setText(PreferencesManager.getOption(this, key, default))
+            edit.addTextChangedListener(object : TextWatcher {
+                override fun afterTextChanged(value: Editable?) { PreferencesManager.setOption(this@MainActivity, key, value.toString()) }
+                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            })
+        }
+        text(R.id.edit_excluded_tags, "excluded_tags")
+        text(R.id.edit_vault_name, "obsidian_vault")
+        text(R.id.edit_note_template, "note_template")
+        text(R.id.edit_notes_subfolder, "notes_subfolder")
+        findViewById<MaterialSwitch>(R.id.switch_tags_and).apply {
+            isChecked = PreferencesManager.getTagLogic(this@MainActivity) == PreferencesManager.TAG_LOGIC_AND
+            setOnCheckedChangeListener { _, checked ->
+                PreferencesManager.setTagLogic(this@MainActivity, if (checked) PreferencesManager.TAG_LOGIC_AND else PreferencesManager.TAG_LOGIC_OR)
+                updateFilteredCount()
+            }
+        }
+        findViewById<MaterialSwitch>(R.id.switch_favorites_only).apply {
+            isChecked = PreferencesManager.getOption(this@MainActivity, "favorites_only") == "true"
+            setOnCheckedChangeListener { _, checked ->
+                PreferencesManager.setOption(this@MainActivity, "favorites_only", checked.toString())
+                updateFilteredCount()
+            }
+        }
+        val dates = arrayOf("auto", "yaml", "filename", "modified")
+        findViewById<MaterialButton>(R.id.btn_date_source).setOnClickListener {
+            MaterialAlertDialogBuilder(this).setTitle(R.string.date_source)
+                .setSingleChoiceItems(R.array.date_sources, dates.indexOf(PreferencesManager.getOption(this, "date_source", "auto"))) { dialog, which ->
+                    PreferencesManager.setOption(this, "date_source", dates[which]); dialog.dismiss()
+                }.show()
+        }
+        findViewById<MaterialButton>(R.id.btn_widget_preview).setOnClickListener {
+            val preview = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(32, 24, 32, 24)
+                setBackgroundColor(PreferencesManager.getCustomWidgetBgColor(this@MainActivity))
+            }
+            preview.addView(TextView(this).apply { setText(R.string.preview_title); textSize = 18f; setTextColor(PreferencesManager.getCustomWidgetTitleColor(this@MainActivity)) })
+            preview.addView(TextView(this).apply { setText(R.string.preview_body); textSize = WidgetThemeHelper.getFontSizeSp(this@MainActivity); setTextColor(PreferencesManager.getCustomWidgetTextColor(this@MainActivity)) })
+            val bg = PreferencesManager.getCustomWidgetBgColor(this)
+            val fg = PreferencesManager.getCustomWidgetTextColor(this)
+            val opaqueBg = androidx.core.graphics.ColorUtils.compositeColors(bg, Color.BLACK)
+            val contrast = androidx.core.graphics.ColorUtils.calculateContrast(fg, opaqueBg)
+            MaterialAlertDialogBuilder(this).setTitle(getString(R.string.preview_contrast, contrast)).setView(preview)
+                .setPositiveButton(android.R.string.ok, null).show()
         }
     }
 }

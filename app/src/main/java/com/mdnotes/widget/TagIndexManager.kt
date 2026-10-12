@@ -2,144 +2,82 @@ package com.mdnotes.widget
 
 import android.content.Context
 import android.net.Uri
-import android.util.Log
+import androidx.documentfile.provider.DocumentFile
+import org.json.JSONArray
+import org.json.JSONObject
 
-/**
- * Manages a tag index for fast tag-based filtering.
- * Instead of reading every file on each widget update, we build an index
- * during scan time and use it for O(1) lookups.
- *
- * Index format (tag_index.json):
- * {
- *   "tags": { "tag1": ["uri1", "uri2"], "tag2": ["uri3"] },
- *   "allTags": ["tag1", "tag2", "tag3"]
- * }
- */
+/** Per-folder incremental index. Zero timestamps are never considered reliable. */
 object TagIndexManager {
+    private fun file(context: Context) = PreferencesManager.folderFile(context, "tags.json")
 
-    private const val TAG = "TagIndexManager"
-    private const val INDEX_FILE = "md_tag_index.json"
-
-    data class TagIndex(
-        val tagToUris: Map<String, List<String>>,
-        val allTags: List<String>
-    )
-
-    /**
-     * Build a tag index from all cached file URIs.
-     * This reads every file once and extracts tags (frontmatter + inline #hashtags).
-     * Should be called during refreshCache() on a background thread.
-     *
-     * @param onProgress callback with (current, total) for progress reporting
-     */
-    fun buildIndex(
-        context: Context,
-        fileUris: List<String>,
-        onProgress: ((current: Int, total: Int) -> Unit)? = null
-    ): TagIndex {
-        val tagMap = mutableMapOf<String, MutableList<String>>()
-        val total = fileUris.size
-
-        for ((index, uriStr) in fileUris.withIndex()) {
-            onProgress?.invoke(index + 1, total)
-            try {
-                val uri = Uri.parse(uriStr)
-                val rawContent = context.contentResolver.openInputStream(uri)?.use { stream ->
-                    stream.bufferedReader(Charsets.UTF_8).readText()
-                } ?: continue
-
-                val tags = MarkdownFileScanner.extractFrontmatterTags(rawContent)
-                for (tag in tags) {
-                    tagMap.getOrPut(tag) { mutableListOf() }.add(uriStr)
+    @Synchronized
+    fun buildIndex(context: Context, fileUris: List<String>, onProgress: ((Int, Int) -> Unit)? = null) {
+        val old = load(context)
+        val next = JSONObject()
+        fileUris.forEachIndexed { index, value ->
+            onProgress?.invoke(index + 1, fileUris.size)
+            val uri = Uri.parse(value)
+            val doc = DocumentFile.fromSingleUri(context, uri)
+            val modified = doc?.lastModified() ?: 0L
+            val size = doc?.length() ?: 0L
+            val previous = old.optJSONObject(value)
+            if (modified > 0 && previous?.optLong("modified") == modified && previous.optLong("size") == size) {
+                next.put(value, previous)
+            } else {
+                MarkdownFileScanner.readRawContent(context, uri)?.let { raw ->
+                    next.put(value, record(raw, modified, size))
                 }
-            } catch (e: Exception) {
-                Log.w(TAG, "Failed to index tags for: $uriStr", e)
             }
         }
-
-        val allTags = tagMap.keys.sorted()
-        val index = TagIndex(tagMap, allTags)
-        saveIndex(context, index)
-        return index
+        AtomicJsonStore.write(file(context), next.toString())
     }
 
-    /**
-     * Get file URIs that match ANY of the given tags (OR logic).
-     *
-     * @param tags list of tag names (without #)
-     */
+    private fun record(raw: String, modified: Long, size: Long) = JSONObject()
+        .put("modified", modified).put("size", size).put("tags", JSONArray(NoteMetadata.tags(raw).toList()))
+
+    private fun load(context: Context): JSONObject = runCatching {
+        JSONObject(AtomicJsonStore.read(file(context)) ?: "{}")
+    }.getOrElse { JSONObject() }
+
+    @Synchronized
+    fun updateExistingIndexes(context: Context, uri: String, raw: String?) {
+        java.io.File(context.filesDir, "indexes").walkTopDown().filter { it.name == "tags.json" }.forEach { file ->
+            val root = runCatching { JSONObject(AtomicJsonStore.read(file) ?: "{}") }.getOrNull() ?: return@forEach
+            if (root.has(uri)) {
+                if (raw == null) root.remove(uri) else root.put(uri, record(raw, 0, 0))
+                AtomicJsonStore.write(file, root.toString())
+            }
+        }
+    }
+
     fun getFilesForTags(context: Context, tags: List<String>): List<String> {
-        val index = loadIndex(context) ?: return emptyList()
-        if (tags.isEmpty()) return emptyList()
-
-        val normalizedTags = tags.map { it.removePrefix("#").trim().lowercase() }
-
-        // Union: file must have ANY tag
-        return normalizedTags.flatMap { tag ->
-            index.tagToUris[tag] ?: emptyList()
-        }.distinct()
+        val index = load(context)
+        val excluded = PreferencesManager.getExcludedTags(context)
+        val all = PreferencesManager.getTagLogic(context) == PreferencesManager.TAG_LOGIC_AND
+        val favorites = if (PreferencesManager.getOption(context, "favorites_only") == "true")
+            PreferencesManager.getFavorites(context).toSet() else null
+        return PreferencesManager.getCachedFileUris(context).filter { uri ->
+            if (favorites != null && uri !in favorites) return@filter false
+            val record = index.optJSONObject(uri)
+            val actual = if (record != null) {
+                val arr = record.getJSONArray("tags")
+                (0 until arr.length()).map { arr.getString(it) }.toSet()
+            } else {
+                MarkdownFileScanner.readRawContent(context, Uri.parse(uri))?.let(NoteMetadata::tags) ?: emptySet()
+            }
+            NoteMetadata.matches(actual, tags, excluded, all)
+        }
     }
 
-    /**
-     * Get all known tags from the index.
-     * Useful for tag autocomplete / ChipGroup suggestions.
-     */
     fun getAllKnownTags(context: Context): List<String> {
-        val index = loadIndex(context) ?: return emptyList()
-        return index.allTags
+        val index = load(context)
+        return index.keys().asSequence().flatMap { key ->
+            val tags = index.getJSONObject(key).getJSONArray("tags")
+            (0 until tags.length()).asSequence().map { tags.getString(it) }
+        }.distinct().sorted().toList()
     }
 
-    /**
-     * Get the count of files matching given tags (for badge display).
-     */
-    fun getFilteredCount(context: Context, tags: List<String>): Int {
-        if (tags.isEmpty()) return PreferencesManager.getCachedFileUris(context).size
-        return getFilesForTags(context, tags).size
-    }
+    fun getFilteredCount(context: Context, tags: List<String>): Int = getFilesForTags(context, tags).size
 
-    // ── Persistence ──────────────────────────────────────────────────────────
-
-    private fun saveIndex(context: Context, index: TagIndex) {
-        try {
-            val root = org.json.JSONObject()
-            val tagsObj = org.json.JSONObject()
-            for ((tag, uris) in index.tagToUris) {
-                tagsObj.put(tag, org.json.JSONArray(uris))
-            }
-            root.put("tags", tagsObj)
-            root.put("allTags", org.json.JSONArray(index.allTags))
-            java.io.File(context.filesDir, INDEX_FILE).writeText(root.toString())
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to save tag index", e)
-        }
-    }
-
-    private fun loadIndex(context: Context): TagIndex? {
-        return try {
-            val file = java.io.File(context.filesDir, INDEX_FILE)
-            if (!file.exists()) return null
-            val root = org.json.JSONObject(file.readText())
-            val tagsObj = root.getJSONObject("tags")
-            val tagMap = mutableMapOf<String, List<String>>()
-            for (key in tagsObj.keys()) {
-                val arr = tagsObj.getJSONArray(key)
-                tagMap[key] = (0 until arr.length()).map { arr.getString(it) }
-            }
-            val allTagsArr = root.getJSONArray("allTags")
-            val allTags = (0 until allTagsArr.length()).map { allTagsArr.getString(it) }
-            TagIndex(tagMap, allTags)
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to load tag index", e)
-            null
-        }
-    }
-
-    /**
-     * Clear the tag index file.
-     */
-    fun clearIndex(context: Context) {
-        try {
-            java.io.File(context.filesDir, INDEX_FILE).delete()
-        } catch (_: Exception) {}
-    }
+    @Synchronized fun clearIndex(context: Context) { android.util.AtomicFile(file(context)).delete() }
 }

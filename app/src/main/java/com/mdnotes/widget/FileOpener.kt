@@ -36,6 +36,7 @@ object FileOpener {
     fun openInViewer(context: Context, fileUri: Uri) {
         val intent = Intent(context, NoteViewerActivity::class.java).apply {
             putExtra(NoteViewerActivity.EXTRA_NOTE_URI, fileUri.toString())
+            if (context is PreferencesManager.WidgetContext) putExtra(NoteViewerActivity.EXTRA_WIDGET_ID, context.widgetId)
             flags = Intent.FLAG_ACTIVITY_NEW_TASK
         }
         context.startActivity(intent)
@@ -46,45 +47,19 @@ object FileOpener {
      * Centralized logic — used by both FileOpener and NoteViewerActivity.
      */
     fun tryOpenWithObsidian(context: Context, fileUri: Uri): Boolean {
-        val absolutePath = resolveAbsolutePath(fileUri) ?: return false
-        return tryOpenWithObsidianByPath(context, absolutePath)
-    }
-
-    fun tryOpenWithObsidianByPath(context: Context, absolutePath: String): Boolean {
+        val folder = PreferencesManager.getFolderUri(context) ?: return false
         return try {
-            val obsidianUri = buildObsidianUri(absolutePath) ?: return false
-            val intent = Intent(Intent.ACTION_VIEW, obsidianUri).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-            }
-            context.startActivity(intent)
+            val root = DocumentsContract.getTreeDocumentId(folder)
+            val document = DocumentsContract.getDocumentId(fileUri)
+            if (!document.startsWith("$root/")) return false
+            val vault = PreferencesManager.getOption(context, "obsidian_vault")
+                .ifBlank { root.substringAfterLast('/').substringAfter(':') }
+            val relative = document.removePrefix("$root/").replace(Regex("(?i)\\.md$"), "")
+            val uri = Uri.Builder().scheme("obsidian").authority("open")
+                .appendQueryParameter("vault", vault).appendQueryParameter("file", relative).build()
+            context.startActivity(Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             true
-        } catch (e: Exception) {
-            false
-        }
-    }
-
-    /**
-     * Builds an obsidian://open?vault=...&file=... URI from an absolute file path.
-     */
-    fun buildObsidianUri(absolutePath: String): Uri? {
-        return try {
-            val pathParts = absolutePath.removePrefix("/storage/emulated/0/").split("/")
-            val vaultName = if (pathParts.size >= 2) pathParts[0] else null
-            val relativePath = if (vaultName != null && pathParts.size >= 2) {
-                pathParts.drop(1).joinToString("/").removeSuffix(".md")
-            } else {
-                absolutePath.substringAfterLast('/').removeSuffix(".md")
-            }
-
-            val uriBuilder = StringBuilder("obsidian://open?")
-            if (vaultName != null) {
-                uriBuilder.append("vault=${Uri.encode(vaultName)}&")
-            }
-            uriBuilder.append("file=${Uri.encode(relativePath)}")
-            Uri.parse(uriBuilder.toString())
-        } catch (e: Exception) {
-            null
-        }
+        } catch (e: Exception) { false }
     }
 
     fun openWithSystemChooser(context: Context, fileUri: Uri) {
@@ -110,21 +85,4 @@ object FileOpener {
         Toast.makeText(context, context.getString(R.string.error_opening_file), Toast.LENGTH_SHORT).show()
     }
 
-    fun resolveAbsolutePath(uri: Uri): String? {
-        return try {
-            val docId = DocumentsContract.getDocumentId(uri)
-            val colonIdx = docId.indexOf(':')
-            if (colonIdx == -1) return null
-
-            val volume = docId.substring(0, colonIdx)
-            val path = docId.substring(colonIdx + 1)
-
-            when (volume) {
-                "primary" -> "/storage/emulated/0/$path"
-                else -> "/storage/$volume/$path"
-            }
-        } catch (e: Exception) {
-            null
-        }
-    }
 }

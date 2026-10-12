@@ -24,7 +24,8 @@ local.properties
 .idea/assetWizardSettings.xml
 
 # Android compiled files
-/build
+**/build/
+.kotlin/
 /captures
 *.apk
 *.aab

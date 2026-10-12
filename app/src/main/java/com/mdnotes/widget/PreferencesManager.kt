@@ -43,12 +43,17 @@ object PreferencesManager {
     // ── Folder URI ────────────────────────────────────────────────────────────
 
     fun getFolderUri(context: Context): Uri? {
+        if (context is ScanContext) return context.folder
         val str = prefs(context).getString(KEY_FOLDER_URI, null)
         return str?.let { Uri.parse(it) }
     }
 
     fun setFolderUri(context: Context, uri: Uri?) {
-        prefs(context).edit().putString(KEY_FOLDER_URI, uri?.toString()).apply()
+        val preferences = prefs(context)
+        val edit = preferences.edit().putString(KEY_FOLDER_URI, uri?.toString())
+        if (getFolderUri(context) != uri) preferences.all.keys
+            .filter { it.matches(Regex("(?:note|pinned)_\\d+")) }.forEach(edit::remove)
+        edit.apply()
     }
 
     // ── Update interval ───────────────────────────────────────────────────────
@@ -170,6 +175,7 @@ object PreferencesManager {
     )
 
     fun getFolderBlacklist(context: Context): List<String> {
+        if (context is ScanContext) return context.blacklist
         val raw = prefs(context).getString("folder_blacklist", "") ?: ""
         val user = if (raw.isBlank()) emptyList()
                    else raw.split(";").map { it.trim() }.filter { it.isNotEmpty() }
@@ -231,22 +237,30 @@ object PreferencesManager {
         val start = startH * 60 + startM
         val (endH, endM) = getQuietHoursEnd(context)
         val end = endH * 60 + endM
-        return if (start <= end) {
-            currentMinutes in start..end
+        return if (start == end) false else if (start < end) {
+            currentMinutes >= start && currentMinutes < end
         } else {
-            currentMinutes >= start || currentMinutes <= end
+            currentMinutes >= start || currentMinutes < end
         }
     }
 
     // ── Cached file list (JSON) ───────────────────────────────────────────────
 
     private fun getCacheFile(context: Context): java.io.File {
-        return java.io.File(context.filesDir, "md_notes_cache.json")
+        return folderFile(context, "files.json")
+    }
+
+    fun folderFile(context: Context, name: String): java.io.File {
+        val key = java.security.MessageDigest.getInstance("SHA-256")
+            .digest(((getFolderUri(context)?.toString() ?: "none") + "\n" +
+                getFolderBlacklist(context).map { it.lowercase() }.distinct().sorted().joinToString("\n")).toByteArray())
+            .joinToString("") { "%02x".format(it) }
+        return java.io.File(context.filesDir, "indexes/$key/$name")
     }
 
     fun getCachedFileUris(context: Context): List<String> {
         val file = getCacheFile(context)
-        if (!file.exists()) {
+        if (!file.exists() && !java.io.File(file.path + ".bak").exists()) {
             val raw = prefs(context).getString(KEY_FILES_CACHE, "") ?: ""
             if (raw.isNotEmpty()) {
                 val list = raw.split("\n").filter { it.isNotBlank() }
@@ -257,7 +271,7 @@ object PreferencesManager {
             return emptyList()
         }
         return try {
-            val jsonArray = org.json.JSONArray(file.readText())
+            val jsonArray = org.json.JSONArray(AtomicJsonStore.read(file) ?: return emptyList())
             (0 until jsonArray.length()).map { jsonArray.getString(it) }
         } catch (e: Exception) {
             emptyList()
@@ -268,7 +282,7 @@ object PreferencesManager {
         try {
             val jsonArray = org.json.JSONArray()
             for (uri in uris) jsonArray.put(uri)
-            getCacheFile(context).writeText(jsonArray.toString())
+            AtomicJsonStore.write(getCacheFile(context), jsonArray.toString())
         } catch (e: Exception) {
             android.util.Log.e("PreferencesManager", "Failed to save cache", e)
         }
@@ -308,7 +322,7 @@ object PreferencesManager {
         return readJsonList(context, "note_history.json")
     }
 
-    fun addToNoteHistory(context: Context, noteUri: String) {
+    fun addToNoteHistory(context: Context, noteUri: String) = AtomicJsonStore.transaction {
         val history = getNoteHistory(context).toMutableList()
         history.remove(noteUri)
         history.add(0, noteUri)
@@ -318,7 +332,7 @@ object PreferencesManager {
     /**
      * Remove a specific URI from history.
      */
-    fun removeFromHistory(context: Context, noteUri: String) {
+    fun removeFromHistory(context: Context, noteUri: String) = AtomicJsonStore.transaction {
         val history = getNoteHistory(context).toMutableList()
         history.remove(noteUri)
         writeJsonList(context, "note_history.json", history)
@@ -334,7 +348,7 @@ object PreferencesManager {
         return getFavorites(context).contains(noteUri)
     }
 
-    fun addToFavorites(context: Context, noteUri: String) {
+    fun addToFavorites(context: Context, noteUri: String) = AtomicJsonStore.transaction {
         val favs = getFavorites(context).toMutableList()
         if (!favs.contains(noteUri)) {
             favs.add(0, noteUri)
@@ -342,7 +356,7 @@ object PreferencesManager {
         }
     }
 
-    fun removeFromFavorites(context: Context, noteUri: String) {
+    fun removeFromFavorites(context: Context, noteUri: String) = AtomicJsonStore.transaction {
         val favs = getFavorites(context).toMutableList()
         favs.remove(noteUri)
         writeJsonList(context, "favorites.json", favs)
@@ -355,8 +369,8 @@ object PreferencesManager {
         removeFromFavorites(context, noteUri)
     }
 
-    fun toggleFavorite(context: Context, noteUri: String): Boolean {
-        return if (isFavorite(context, noteUri)) {
+    fun toggleFavorite(context: Context, noteUri: String): Boolean = AtomicJsonStore.transaction {
+        if (isFavorite(context, noteUri)) {
             removeFromFavorites(context, noteUri)
             false
         } else {
@@ -371,7 +385,7 @@ object PreferencesManager {
         return readJsonList(context, "recently_shown.json")
     }
 
-    fun addToRecentlyShown(context: Context, noteUri: String) {
+    fun addToRecentlyShown(context: Context, noteUri: String) = AtomicJsonStore.transaction {
         val recent = getRecentlyShown(context).toMutableList()
         recent.remove(noteUri)
         recent.add(0, noteUri)
@@ -383,11 +397,10 @@ object PreferencesManager {
     private fun readJsonList(context: Context, filename: String): List<String> {
         return try {
             val file = java.io.File(context.filesDir, filename)
-            if (!file.exists()) return emptyList()
-            val jsonArray = org.json.JSONArray(file.readText())
+            val jsonArray = org.json.JSONArray(AtomicJsonStore.read(file) ?: return emptyList())
             (0 until jsonArray.length()).map { jsonArray.getString(it) }
         } catch (e: Exception) {
-            emptyList()
+            throw java.io.IOException("Cannot read $filename; existing data preserved", e)
         }
     }
 
@@ -395,14 +408,81 @@ object PreferencesManager {
         try {
             val jsonArray = org.json.JSONArray()
             for (item in list) jsonArray.put(item)
-            java.io.File(context.filesDir, filename).writeText(jsonArray.toString())
+            AtomicJsonStore.write(java.io.File(context.filesDir, filename), jsonArray.toString())
         } catch (e: Exception) {
             android.util.Log.e("PreferencesManager", "Failed to write $filename", e)
+            throw java.io.IOException("Cannot write $filename", e)
         }
     }
 
     // ── Helper ────────────────────────────────────────────────────────────────
 
-    private fun prefs(context: Context) =
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    fun widgetContext(context: Context, widgetId: Int): Context = WidgetContext(context.applicationContext, widgetId)
+
+    class WidgetContext(base: Context, val widgetId: Int) : android.content.ContextWrapper(base)
+
+    class ScanContext(base: Context, val folder: Uri, val blacklist: List<String>) : android.content.ContextWrapper(base)
+
+    private fun prefs(context: Context): android.content.SharedPreferences {
+        if (context is ScanContext) return prefs(context.baseContext)
+        val id = when (context) {
+            is WidgetContext -> context.widgetId
+            is MainActivity -> context.settingsWidgetId
+            else -> android.appwidget.AppWidgetManager.INVALID_APPWIDGET_ID
+        }
+        val global = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        if (id == android.appwidget.AppWidgetManager.INVALID_APPWIDGET_ID) return global
+        val local = context.getSharedPreferences("widget_settings_$id", Context.MODE_PRIVATE)
+        if (!local.getBoolean("initialized", false)) {
+            synchronized(this) {
+                if (!local.getBoolean("initialized", false)) {
+                    val edit = local.edit()
+                    global.all.filterKeys { !it.matches(Regex("(?:note|pinned)_\\d+")) }.forEach { (key, value) ->
+                        when (value) {
+                            is String -> edit.putString(key, value)
+                            is Int -> edit.putInt(key, value)
+                            is Boolean -> edit.putBoolean(key, value)
+                            is Long -> edit.putLong(key, value)
+                        }
+                    }
+                    global.getString("note_$id", null)?.let { edit.putString("note_$id", it) }
+                    edit.putBoolean("pinned_$id", global.getBoolean("pinned_$id", false))
+                    edit.putBoolean("initialized", true).apply()
+                }
+            }
+        }
+        return local
+    }
+
+    fun deleteWidgetSettings(context: Context, id: Int) {
+        context.deleteSharedPreferences("widget_settings_$id")
+    }
+
+    fun getExcludedTags(context: Context): List<String> = getOption(context, "excluded_tags", "")
+        .split(',', ';').map { it.trim().removePrefix("#").lowercase() }.filter { it.isNotBlank() }
+
+    fun getOption(context: Context, key: String, default: String = ""): String = prefs(context).getString(key, default) ?: default
+    fun setOption(context: Context, key: String, value: String) { prefs(context).edit().putString(key, value).apply() }
+
+    fun removeNoteReferences(context: Context, uri: String) = AtomicJsonStore.transaction {
+        removeFromHistory(context, uri)
+        removeFromFavorites(context, uri)
+        writeJsonList(context, "recently_shown.json", getRecentlyShown(context).filterNot { it == uri })
+        val manager = android.appwidget.AppWidgetManager.getInstance(context)
+        for (provider in listOf(NoteWidgetProvider::class.java, NoteListWidgetProvider::class.java)) {
+            for (id in manager.getAppWidgetIds(android.content.ComponentName(context, provider))) {
+                val configured = widgetContext(context, id)
+                if (getCurrentNoteUri(configured, id) == uri) {
+                    clearWidgetNote(configured, id)
+                    clearWidgetPinned(configured, id)
+                }
+            }
+        }
+        // Different widgets can use overlapping trees. Invalidate each cached index.
+        java.io.File(context.filesDir, "indexes").walkTopDown().filter { it.name == "files.json" }.forEach { file ->
+            val values = runCatching { org.json.JSONArray(AtomicJsonStore.read(file)) }.getOrNull() ?: return@forEach
+            val remaining = (0 until values.length()).map { values.getString(it) }.filterNot { it == uri }
+            AtomicJsonStore.write(file, org.json.JSONArray(remaining).toString())
+        }
+    }
 }

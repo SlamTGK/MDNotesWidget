@@ -27,7 +27,7 @@
 
     <string name="tag_settings">Tag Filter</string>
     <string name="tag_hint">e.g. favorites, daily</string>
-    <string name="tag_desc">Comma-separated tags. Searches #tag in note text</string>
+    <string name="tag_desc">Comma-separated tags from YAML and text. Parent tags include nested tags.</string>
     <string name="tag_logic_label">Filter Logic</string>
     <string name="tag_logic_or">Any tag (OR)</string>
     <string name="tag_logic_and">All tags (AND)</string>
@@ -39,8 +39,8 @@
     <string name="interval_30m">30 min</string>
     <string name="interval_max">24 h</string>
 
-    <string name="app_version">v3.0</string>
-    <string name="author_credit">MD Notes Widget v3.0\nMade by aristocrat \u2022 @slamtgk</string>
+    <string name="app_version">v3.2</string>
+    <string name="author_credit">MD Notes Widget\nMade by aristocrat \u2022 @slamtgk</string>
     <string name="actions_section">Actions</string>
 
     <string name="select_folder">Select Folder</string>
@@ -52,11 +52,11 @@
     <string name="obsidian">Obsidian</string>
     <string name="system_chooser">Other app</string>
     <string name="built_in_viewer">Built-in viewer</string>
-    <string name="obsidian_not_installed">Obsidian not found, opening chooser…</string>
+    <string name="obsidian_not_installed">Cannot open Obsidian. Check the app, vault name and selected root folder.</string>
 
     <string name="refresh_all_widgets">Refresh All Widgets</string>
     <string name="refresh_file_list">Rescan Files</string>
-    <string name="widget_updated">Widgets updated</string>
+    <string name="widget_updated">Widget update scheduled</string>
     <string name="files_refreshed">Files found: %d</string>
     <string name="error_opening_file">Could not open file</string>
     <string name="refresh">Refresh</string>
@@ -90,12 +90,12 @@
 
     <string name="saf_permission_lost">Folder access lost. Please select again.</string>
 
-    <string name="widget_list_description">Note list with swipe navigation</string>
+    <string name="widget_list_description">Expanded preview of a random Markdown note</string>
 
     <string name="more_options">More</string>
     <string name="share_note">Share</string>
     <string name="delete_note">Delete note</string>
-    <string name="delete_note_confirm">Are you sure? The file will be permanently deleted from your device.</string>
+    <string name="delete_note_confirm">Move this note to app trash? Restore it using the viewer menu.</string>
     <string name="delete">Delete</string>
     <string name="note_deleted">Note deleted</string>
     <string name="error_deleting_file">Could not delete file</string>
@@ -126,7 +126,37 @@
     <string name="on_this_day">On This Day</string>
     <string name="no_on_this_day">No notes from this day in past years</string>
     <string name="on_this_day_found">Found %d notes from this day</string>
+    <string name="on_this_day_loading">⏳ Searching notes…</string>
 
     <!-- Swipe actions -->
     <string name="removed_from_history">Removed from history</string>
+    <string name="edit_conflict">The file changed in another app. Your draft is kept; discard unsaved edits to reload the current file.</string>
+    <string name="discard_edits">Discard unsaved edits</string>
+    <string name="discard_confirm">Delete the local draft and reload the last saved file?</string>
+    <string name="trash_empty">Trash is empty</string>
+    <string name="restore_note">Restore from trash</string>
+    <string name="restore_failed">Cannot restore. Check folder access and whether a file with this name already exists.</string>
+    <string name="daily_note">Daily note</string>
+    <string name="invalid_note_name">Enter a name without path separators</string>
+    <string name="link_not_found">Note not found or link is ambiguous</string>
+    <string name="minutes_format">%d min</string>
+    <string name="hours_minutes_format">%1$d h %2$d min</string>
+    <string name="settings_defaults">Defaults for new widgets. Tap an existing widget title to configure it separately.</string>
+    <string name="settings_widget">Settings for widget #%d</string>
+    <string name="author_credit_version">MD Notes Widget v%1$s\nMade by aristocrat • @slamtgk</string>
+    <string name="favorites_only">Favorites only</string>
+    <string name="excluded_tags">Exclude tags (comma-separated)</string>
+    <string name="vault_name">Obsidian vault name (selected folder must be its root)</string>
+    <string name="notes_subfolder">New notes subfolder, e.g. Daily</string>
+    <string name="note_template">Template: {{date}} and {{title}}</string>
+    <string name="date_source">On this day: date source</string>
+    <string name="widget_preview">Preview custom colors</string>
+    <string name="preview_title">Note title</string>
+    <string name="preview_body">Note text. Enter colors with transparency as #AARRGGBB.</string>
+    <string name="preview_contrast">Contrast on black: %1$.1f:1 (target 4.5:1)</string>
+    <string-array name="date_sources"><item>YAML → filename → modification date</item><item>YAML: date or created</item><item>YYYY-MM-DD in filename</item><item>File modification date</item></string-array>
+    <string name="read_only_note">This note is read-only</string>
+    <string name="open_notes">Open notes</string>
+    <string name="storage_error">Cannot read or save app data</string>
+    <string name="read_only_folder">Folder is read-only: viewing is available, editing and creation are not.</string>
 </resources>

@@ -1,104 +1,71 @@
-<div align="center">
-  <h1>MD Notes Widget</h1>
-  <p><b>A Markdown note widget for your Android home screen.</b></p>
+# MD Notes Widget
 
-  <p>
-    <a href="README.md">Русская версия (Russian)</a>
-  </p>
+Local Markdown notes and home-screen widgets for **Android 12+ · Kotlin · version 3.2**.
 
-  <p>
-    <img src="https://img.shields.io/badge/Android-12%2B-green?logo=android" alt="Android 12+" />
-    <img src="https://img.shields.io/badge/version-3.1-blue" alt="Version 3.1" />
-    <img src="https://img.shields.io/badge/Kotlin-2.1-purple?logo=kotlin" alt="Kotlin" />
-    <img src="https://img.shields.io/badge/Material%20You-Dynamic%20Colors-orange" alt="Material You" />
-  </p>
-</div>
+[Русский](README.md) · [Download APK](https://github.com/SlamTGK/MDNotesWidget/releases/latest)
 
----
+## Features
 
-**MD Notes Widget** is an Android app for people who store notes in Markdown. It randomly displays `.md` files from a chosen folder directly on your home screen. Works great with **Obsidian**, Logseq, and any other local Markdown vault.
+- Compact and expanded widgets with random notes, pinning, creation and manual refresh.
+- **Per-widget settings:** folder, tags, theme, font, interval and quiet hours. Tap a widget title to configure it. The launcher screen sets defaults for **new** widgets.
+- Markdown viewer with tables, code blocks, strikethrough, task lists and links. Local images appear in a separate preview strip.
+- Wiki links `[[note]]`, `[[path/note|label]]` and relative Markdown links. Ambiguous filenames are not opened arbitrarily.
+- **Autosaving editor**, local recovery drafts and external-change detection. Paging is disabled while editing. Empty notes can be saved; failed writes are reported.
+- Search across filenames and full content, favorites and the last 50 opened notes.
+- YAML and inline tags with AND/OR, exclusions, nested tags and favorites-only filtering. `work` includes `work/project`, not `workshop`.
+- **App trash:** a local copy is persisted before the original file is deleted. Restore from the viewer menu into the selected root folder, without overwriting an existing file.
+- Daily notes named `YYYY-MM-DD`, a configurable creation subfolder and templates using `{{date}}` / `{{title}}`.
+- On this day: past years only; use YAML `date`/`created`, filename dates or modification dates.
+- Custom colors with `#AARRGGBB` transparency, preview and contrast estimation on black.
 
-## Widgets
+## Setup
 
-| Widget | Description |
-|--------|-------------|
-| **Random Note** | Displays one note. Adapts line count to widget size |
-| **Extended Widget** | Shows the full note with maximum content |
+1. Install the APK from Releases.
+2. Add a home-screen widget and select a folder using Android's system picker.
+3. Wait for scanning. Read-only folders can be viewed; editing requires write access.
+4. For Obsidian, select the **vault root** and optionally enter its name. Nested vault locations are supported.
 
-Common widget features:
-- 📌 **Pin** — keep the current note on screen
-- ➕ **Create** — quickly create a `.md` file right from the widget
-- 🔄 **Refresh** — show a different random note
-- 🏷️ **Tag status** — shown inline with date and folder: `Apr 24 2026, Psychology, #favorites`
-- 🎨 **Themes** — Purple, Dark, Transparent, Custom
-- 🔡 **Font size** — Small / Medium / Large
+Use “Rescan files” after changing files externally. Periodic updates also scan the tree; tag indexing rereads changed files. Providers without reliable modification dates are reread.
 
-## Note Viewer
+## Behavior and limits
 
-- **Markdown rendering** — headings, **bold**, _italic_, ~~strikethrough~~, ☑ checkboxes, lists
-- **Editor** — ✏️ button toggles edit mode with monospace font and auto-save
-- **Images** — horizontal scroll with image previews from the note
-- **Swipe** — swipe between random notes
-- **Search** — live search by note title and content
-- **Favorites** — add with one tap, swipe to remove
-- **History** — last 50 opened notes with swipe actions
-- **On This Day** — notes from this day in past years
-- **Menu ⋮** — share, open in Obsidian, open externally, delete
+- Background updates use **WorkManager**, at approximate intervals of 15 minutes or longer. Doze and battery restrictions can delay updates. Quiet hours apply only to automatic refresh.
+- Xiaomi/HyperOS devices may require autostart and unrestricted battery access.
+- Widgets show text **previews**, up to 2000/4000 characters. Open the viewer for the complete note. The expanded widget is not a scrolling editor.
+- Autosave writes the actual file. “Discard unsaved edits” removes a draft and reloads the saved file; it does not undo completed autosaves.
+- External edits preserve the local draft instead of overwriting the changed file. Copy any needed draft text before discarding a conflict. SAF does not offer universal cross-app transactional writes.
+- Trash and drafts live in app data. Uninstalling or clearing app data removes them. They are not a replacement for vault backups.
+- Common YAML tag forms are supported: inline arrays, single values and block lists. Advanced YAML and all Obsidian extensions are not supported. Tags inside code blocks are ignored.
 
-## Filtering & Settings
+## Build and verify
 
-- **Tags** — enter tags separated by commas (`favorites, daily`); the widget shows only matching notes
-- **Tag search** — finds `#tags` in YAML frontmatter and inline in note text
-- **Auto-suggestions** — ChipGroup shows tags from your actual notes
-- **Folder blacklist** — exclude folders from scanning (`.trash`, `templates`, etc.)
-- **Anti-repeat** — last 20 shown notes are excluded from random selection
-- **Update interval** — off / 15 min / 30 min / 1–24 h
-- **Quiet hours** — widget won't update at night
-- **Click action** — built-in viewer / Obsidian / system chooser
+Install **JDK 17**, Android SDK Platform 36 and Build Tools 36.0.0. Set `ANDROID_HOME` or `sdk.dir` in a local `local.properties`.
 
-## Installation
-
-1. Download the APK from [Releases](../../releases/latest)
-2. Allow installation from unknown sources
-3. Install the APK
-4. Long-press on your home screen and add the **MD Notes Widget**
-5. In widget settings, select your folder with `.md` files
-
-> **Xiaomi / HyperOS:** For reliable scheduled updates, enable "Autostart" and set Battery Saver to "No Restrictions" for this app.
-
-## Requirements
-
-- Android 12+ (API 31)
-- Folder access permission (via system dialog, no root required)
-
-## Tech Stack
-
-- **Kotlin** + Android SDK
-- **Material You** — dynamic system colors
-- **SAF** (Storage Access Framework) — secure file access
-- **AlarmManager** — reliable periodic widget updates
-- **Coroutines** — async operations
-
-## Project Structure
-
-```
-app/src/main/java/com/mdnotes/widget/
-├── MainActivity.kt            # Settings screen
-├── NoteViewerActivity.kt      # Full-screen viewer + editor + search
-├── HistoryActivity.kt         # Note history with swipe actions
-├── FavoritesActivity.kt       # Favorites with swipe actions
-├── NoteWidgetProvider.kt      # Main widget
-├── NoteListWidgetProvider.kt  # Extended widget
-├── WidgetThemeHelper.kt       # Centralized widget theming
-├── PreferencesManager.kt      # Settings & state storage
-├── MarkdownFileScanner.kt     # Scanning, rendering, tag extraction
-├── TagIndexManager.kt         # Tag → URI index with JSON persistence
-├── NoteListAdapter.kt         # Universal RecyclerView adapter
-└── FileOpener.kt              # File opening (Obsidian / System / Viewer)
+```bash
+./gradlew testDebugUnitTest lintDebug assembleDebug
 ```
 
----
+On Windows:
 
-<div align="center">
-  <p>Made with ❤️ by <a href="https://t.me/slamtgk">@slamtgk</a></p>
-</div>
+```powershell
+.\gradlew.bat testDebugUnitTest lintDebug assembleDebug
+```
+
+The Wrapper pins Gradle 8.11.1 and verifies its distribution SHA-256. Debug APK: `app/build/outputs/apk/debug/app-debug.apk`.
+
+For release builds, provide `KEYSTORE_PATH`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`, then run `./gradlew assembleRelease`. Release builds never fall back to a debug key.
+
+CI runs tests, Android Lint and a debug build on pushes/PRs. Tags matching `v*` publish a signed release after checks pass. Repository secrets: `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`.
+
+## Architecture
+
+- `EditorViewModel`: URI-bound editing session and save queue.
+- `NoteRepository`: writes, conflicts, drafts and trash.
+- `MarkdownFileScanner`, `NoteMetadata`, `TagIndexManager`: SAF scanning and incremental indexing.
+- `WidgetUpdateCoordinator` / `WidgetUpdateWorker`: independent widget background jobs.
+- `AtomicJsonStore`: atomic local JSON persistence; list mutations are serialized.
+- Markwon rendering and Material 3 UI.
+
+Regression unit tests in `app/src/test/` cover metadata parsing, filters, settings isolation and atomic storage. Device release checks should include editor rotation/backgrounding, revoked SAF access, read-only providers, both widget types with separate folders, reboot, Doze and trash restoration.
+
+Made by [@slamtgk](https://t.me/slamtgk).

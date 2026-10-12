@@ -33,6 +33,9 @@
                 android:id="@+id/action_delete"
                 android:icon="@drawable/ic_delete"
                 android:title="@string/delete_note" />
+            <item android:id="@+id/action_discard" android:title="@string/discard_edits" />
+            <item android:id="@+id/action_daily_note" android:title="@string/daily_note" />
+            <item android:id="@+id/action_trash" android:title="@string/restore_note" />
         </menu>
     </item>
 

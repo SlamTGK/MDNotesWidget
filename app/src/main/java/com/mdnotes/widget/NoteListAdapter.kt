@@ -75,9 +75,7 @@ class NoteListAdapter(
         val builder = SpannableStringBuilder(text)
         if (query.length < 2) return builder
 
-        val lowerText = text.lowercase()
-        val lowerQuery = query.lowercase()
-        var start = lowerText.indexOf(lowerQuery)
+        var start = text.indexOf(query, ignoreCase = true)
         while (start >= 0) {
             builder.setSpan(
                 BackgroundColorSpan(highlightColor),
@@ -85,7 +83,7 @@ class NoteListAdapter(
                 start + query.length,
                 Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
             )
-            start = lowerText.indexOf(lowerQuery, start + query.length)
+            start = text.indexOf(query, start + query.length, ignoreCase = true)
         }
         return builder
     }

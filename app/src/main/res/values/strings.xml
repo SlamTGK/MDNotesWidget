@@ -30,7 +30,7 @@
     <!-- Tag filter -->
     <string name="tag_settings">Фильтр по тегам</string>
     <string name="tag_hint">Например: избранное, daily</string>
-    <string name="tag_desc">Теги через запятую. Ищет #тег в тексте заметки</string>
+    <string name="tag_desc">Теги через запятую, из YAML и текста. Родительский тег включает вложенные.</string>
     <string name="tag_logic_label">Логика фильтрации</string>
     <string name="tag_logic_or">Любой тег (ИЛИ)</string>
     <string name="tag_logic_and">Все теги (И)</string>
@@ -42,8 +42,8 @@
     <string name="interval_30m">30 мин</string>
     <string name="interval_max">24 ч</string>
 
-    <string name="app_version">v3.0</string>
-    <string name="author_credit">MD Notes Widget v3.0\nMade by aristocrat \u2022 @slamtgk</string>
+    <string name="app_version">v3.2</string>
+    <string name="author_credit">MD Notes Widget\nMade by aristocrat \u2022 @slamtgk</string>
     <string name="actions_section">Управление</string>
 
     <!-- Folder -->
@@ -57,12 +57,12 @@
     <string name="obsidian">Obsidian</string>
     <string name="system_chooser">Другое приложение</string>
     <string name="built_in_viewer">Встроенный просмотр</string>
-    <string name="obsidian_not_installed">Obsidian не найден, открываю выбор…</string>
+    <string name="obsidian_not_installed">Не удалось открыть Obsidian. Проверьте приложение, имя vault и выбранную корневую папку.</string>
 
     <!-- Actions -->
     <string name="refresh_all_widgets">Обновить все виджеты</string>
     <string name="refresh_file_list">Пересканировать файлы</string>
-    <string name="widget_updated">Виджеты обновлены</string>
+    <string name="widget_updated">Обновление виджетов запланировано</string>
     <string name="files_refreshed">Найдено файлов: %d</string>
     <string name="error_opening_file">Не удалось открыть файл</string>
     <string name="refresh">Обновить</string>
@@ -103,13 +103,13 @@
     <string name="saf_permission_lost">Доступ к папке утерян. Выберите заново.</string>
 
     <!-- List widget -->
-    <string name="widget_list_description">Показывает случайную заметку с прокруткой всего текста</string>
+    <string name="widget_list_description">Расширенное превью случайной Markdown-заметки</string>
 
     <!-- Overflow menu -->
     <string name="more_options">Ещё</string>
     <string name="share_note">Поделиться</string>
     <string name="delete_note">Удалить заметку</string>
-    <string name="delete_note_confirm">Вы уверены? Файл будет удалён с устройства без возможности восстановления.</string>
+    <string name="delete_note_confirm">Переместить заметку в корзину приложения? Восстановление доступно в меню просмотрщика.</string>
     <string name="delete">Удалить</string>
     <string name="note_deleted">Заметка удалена</string>
     <string name="error_deleting_file">Не удалось удалить файл</string>
@@ -147,4 +147,33 @@
 
     <!-- Swipe actions -->
     <string name="removed_from_history">Удалено из истории</string>
+    <string name="edit_conflict">Файл изменён другим приложением. Черновик сохранён; отмените несохранённые правки, чтобы загрузить актуальный файл.</string>
+    <string name="discard_edits">Отменить несохранённые правки</string>
+    <string name="discard_confirm">Удалить локальный черновик и загрузить последнюю сохранённую версию файла?</string>
+    <string name="trash_empty">Корзина пуста</string>
+    <string name="restore_note">Восстановить из корзины</string>
+    <string name="restore_failed">Не удалось восстановить. Проверьте доступ к папке и отсутствие файла с таким именем.</string>
+    <string name="daily_note">Ежедневная заметка</string>
+    <string name="invalid_note_name">Введите имя без разделителей пути</string>
+    <string name="link_not_found">Заметка не найдена или ссылка неоднозначна</string>
+    <string name="minutes_format">%d мин</string>
+    <string name="hours_minutes_format">%1$d ч %2$d мин</string>
+    <string name="settings_defaults">Настройки по умолчанию для новых виджетов. Настройки существующего виджета открываются нажатием на его заголовок.</string>
+    <string name="settings_widget">Настройки виджета №%d</string>
+    <string name="author_credit_version">MD Notes Widget v%1$s\nMade by aristocrat • @slamtgk</string>
+    <string name="favorites_only">Только избранное</string>
+    <string name="excluded_tags">Исключить теги (через запятую)</string>
+    <string name="vault_name">Имя Obsidian vault (папка должна быть его корнем)</string>
+    <string name="notes_subfolder">Подпапка для новых заметок, например Daily</string>
+    <string name="note_template">Шаблон: {{date}} и {{title}}</string>
+    <string name="date_source">Источник даты «В этот день»</string>
+    <string name="widget_preview">Предпросмотр своих цветов</string>
+    <string name="preview_title">Заголовок заметки</string>
+    <string name="preview_body">Текст заметки. Цвета с прозрачностью можно вводить в формате #AARRGGBB.</string>
+    <string name="preview_contrast">Контраст на чёрном фоне: %1$.1f:1 (ориентир 4.5:1)</string>
+    <string-array name="date_sources"><item>YAML → имя файла → дата изменения</item><item>YAML: date или created</item><item>Дата YYYY-MM-DD в имени</item><item>Дата изменения файла</item></string-array>
+    <string name="read_only_note">Заметка доступна только для чтения</string>
+    <string name="open_notes">Открыть заметки</string>
+    <string name="storage_error">Не удалось прочитать или сохранить данные приложения</string>
+    <string name="read_only_folder">Папка выбрана только для чтения: просмотр доступен, редактирование и создание — нет.</string>
 </resources>

@@ -40,6 +40,8 @@
             android:excludeFromRecents="true" />
 
         <!-- History activity -->
+        <activity android:name=".OpenNoteActivity" android:exported="false"
+            android:theme="@android:style/Theme.NoDisplay" />
         <activity
             android:name=".HistoryActivity"
             android:exported="false"
@@ -60,10 +62,11 @@
         <!-- Single note widget receiver -->
         <receiver
             android:name=".NoteWidgetProvider"
-            android:exported="true">
+            android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
                 <action android:name="com.mdnotes.widget.ACTION_REFRESH" />
                 <action android:name="com.mdnotes.widget.ACTION_OPEN_NOTE" />
                 <action android:name="com.mdnotes.widget.ACTION_PERIODIC_UPDATE" />
@@ -78,7 +81,7 @@
         <!-- Scrollable single-note widget receiver -->
         <receiver
             android:name=".NoteListWidgetProvider"
-            android:exported="true">
+            android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
                 <action android:name="com.mdnotes.widget.ACTION_SCROLL_REFRESH" />
