@@ -83,16 +83,20 @@ open class NoteWidgetProvider : AppWidgetProvider() {
             views.setViewVisibility(meta, android.view.View.VISIBLE)
             val fontSize = WidgetThemeHelper.getFontSizeSp(context)
             views.setTextViewTextSize(text, android.util.TypedValue.COMPLEX_UNIT_SP, fontSize)
-            // Some launchers initially report 0dp. Do not turn an unknown size into a
-            // one-line widget: the XML TextView will naturally fill the available area.
+            // Apply this on every render. Some launchers retain the TextView state from
+            // an earlier RemoteViews update, including an old one-line maxLines value.
+            // Their initial size may also be 0dp, so use a safe multi-line fallback.
             val options = manager.getAppWidgetOptions(id)
             val minHeight = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0)
             val maxHeight = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 0)
             val height = maxOf(minHeight, maxHeight)
-            if (!expanded && height > 0) {
-                val textHeight = (height - 58).coerceAtLeast(1)
-                val lines = (textHeight / (fontSize * context.resources.configuration.fontScale * 1.35f))
-                    .toInt().coerceAtLeast(2)
+            if (!expanded) {
+                val lines = if (height > 0) {
+                    val textHeight = (height - 58).coerceAtLeast(1)
+                    (textHeight / (fontSize * context.resources.configuration.fontScale * 1.35f)).toInt()
+                } else {
+                    6
+                }.coerceAtLeast(4)
                 views.setInt(text, "setMaxLines", lines)
             }
             views.setOnClickPendingIntent(refresh, broadcast(context, id, ACTION_REFRESH))
