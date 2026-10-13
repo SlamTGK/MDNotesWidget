@@ -11,8 +11,8 @@ android {
         applicationId = "com.mdnotes.widget"
         minSdk = 31
         targetSdk = 36
-        versionCode = 9
-        versionName = "3.2"
+        versionCode = 10
+        versionName = "3.2.1"
     }
 
     signingConfigs {

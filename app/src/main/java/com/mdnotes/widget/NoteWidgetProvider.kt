@@ -40,8 +40,14 @@ open class NoteWidgetProvider : AppWidgetProvider() {
             AppWidgetManager.getInstance(context).updateAppWidget(id, views)
         }
 
-        @Synchronized
-        fun render(context: Context, id: Int, retain: Boolean) {
+        internal fun configureContent(views: RemoteViews, text: Int, fontSize: Float) {
+            views.setTextViewTextSize(text, android.util.TypedValue.COMPLEX_UNIT_SP, fontSize)
+            // Reset restrictions on re-applied RemoteViews as well as newly inflated views.
+            views.setBoolean(text, "setSingleLine", false)
+            views.setInt(text, "setMaxLines", Int.MAX_VALUE)
+        }
+
+        fun render(context: Context, id: Int, retain: Boolean, canPublish: () -> Boolean = { true }) {
             val manager = AppWidgetManager.getInstance(context)
             if (id !in WidgetUpdateCoordinator.ids(context)) return
             val folder = PreferencesManager.getFolderUri(context)
@@ -64,6 +70,7 @@ open class NoteWidgetProvider : AppWidgetProvider() {
                 }
             }
             val content = note ?: run { showError(context, id, R.string.no_notes_found); return }
+            if (!canPublish()) return
             PreferencesManager.setCurrentNoteUri(context, id, content.uri.toString())
             val expanded = manager.getAppWidgetInfo(id)?.provider?.className == NoteListWidgetProvider::class.java.name
             val views = RemoteViews(context.packageName, if (expanded) R.layout.widget_list else R.layout.widget_note)
@@ -82,23 +89,7 @@ open class NoteWidgetProvider : AppWidgetProvider() {
                 .filter { it.isNotBlank() }.joinToString(", "))
             views.setViewVisibility(meta, android.view.View.VISIBLE)
             val fontSize = WidgetThemeHelper.getFontSizeSp(context)
-            views.setTextViewTextSize(text, android.util.TypedValue.COMPLEX_UNIT_SP, fontSize)
-            // Apply this on every render. Some launchers retain the TextView state from
-            // an earlier RemoteViews update, including an old one-line maxLines value.
-            // Their initial size may also be 0dp, so use a safe multi-line fallback.
-            val options = manager.getAppWidgetOptions(id)
-            val minHeight = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0)
-            val maxHeight = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 0)
-            val height = maxOf(minHeight, maxHeight)
-            if (!expanded) {
-                val lines = if (height > 0) {
-                    val textHeight = (height - 58).coerceAtLeast(1)
-                    (textHeight / (fontSize * context.resources.configuration.fontScale * 1.35f)).toInt()
-                } else {
-                    6
-                }.coerceAtLeast(4)
-                views.setInt(text, "setMaxLines", lines)
-            }
+            configureContent(views, text, fontSize)
             views.setOnClickPendingIntent(refresh, broadcast(context, id, ACTION_REFRESH))
             views.setImageViewResource(pin, if (PreferencesManager.isNotePinned(context, id)) R.drawable.ic_pin_filled else R.drawable.ic_pin_outline)
             views.setOnClickPendingIntent(pin, broadcast(context, id, ACTION_PIN_NOTE))
@@ -110,7 +101,7 @@ open class NoteWidgetProvider : AppWidgetProvider() {
             views.setOnClickPendingIntent(create, PendingIntent.getActivity(context, id,
                 activityIntent(context, id, "create", NoteViewerActivity::class.java).putExtra("action_create", true),
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE))
-            manager.updateAppWidget(id, views)
+            if (canPublish()) manager.updateAppWidget(id, views)
         }
     }
 
@@ -134,9 +125,8 @@ open class NoteWidgetProvider : AppWidgetProvider() {
         if (intent.action != ACTION_REFRESH && intent.action != ACTION_PIN_NOTE) return
         val id = intent.getIntExtra(EXTRA_WIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
         if (id !in WidgetUpdateCoordinator.ids(context)) return
-        val configured = PreferencesManager.widgetContext(context, id)
         val pin = intent.action == ACTION_PIN_NOTE
-        PreferencesManager.setNotePinned(configured, id, pin && !PreferencesManager.isNotePinned(configured, id))
-        WidgetUpdateCoordinator.refresh(context, id, retain = pin)
+        val pending = goAsync()
+        WidgetUpdateCoordinator.refreshFromClick(context, id, pin) { pending.finish() }
     }
 }

@@ -80,7 +80,6 @@ object MarkdownFileScanner {
         return result.toList()
     }
 
-    @Synchronized
     fun getRandomFile(context: Context, folderUri: Uri): Uri? {
         var cached = PreferencesManager.getCachedFileUris(context)
         if (cached.isEmpty()) {
