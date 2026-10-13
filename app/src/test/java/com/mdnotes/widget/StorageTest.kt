@@ -53,7 +53,7 @@ class StorageTest {
         assertEquals("broken json", file.readText())
     }
 
-    @Test fun `widget settings are independent and inherit defaults once`() {
+    @Test fun `widgets and application share settings`() {
         PreferencesManager.setTagFilter(context, "default")
         val one = PreferencesManager.widgetContext(context, 101)
         val two = PreferencesManager.widgetContext(context, 102)
@@ -61,8 +61,8 @@ class StorageTest {
         assertEquals("default", PreferencesManager.getTagFilter(two))
         PreferencesManager.setTagFilter(one, "work")
         PreferencesManager.setTagFilter(context, "new default")
-        assertEquals("work", PreferencesManager.getTagFilter(one))
-        assertEquals("default", PreferencesManager.getTagFilter(two))
+        assertEquals("new default", PreferencesManager.getTagFilter(one))
+        assertEquals("new default", PreferencesManager.getTagFilter(two))
     }
 
     @Test fun `changing folders clears a pin but preserves the template`() {
@@ -77,8 +77,8 @@ class StorageTest {
     }
 
     @Test fun `blacklists isolate caches for the same folder`() {
-        val one = PreferencesManager.widgetContext(context, 104)
-        val two = PreferencesManager.widgetContext(context, 105)
+        val one = SettingsDraft(context)
+        val two = SettingsDraft(context)
         val folder = Uri.parse("content://notes/tree/root")
         PreferencesManager.setFolderUri(one, folder)
         PreferencesManager.setFolderUri(two, folder)

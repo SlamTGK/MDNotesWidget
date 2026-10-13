@@ -21,7 +21,7 @@ object TagIndexManager {
             val modified = doc?.lastModified() ?: 0L
             val size = doc?.length() ?: 0L
             val previous = old.optJSONObject(value)
-            if (modified > 0 && previous?.optLong("modified") == modified && previous.optLong("size") == size) {
+            if (modified > 0 && previous?.optInt("version") == 2 && previous.optLong("modified") == modified && previous.optLong("size") == size) {
                 next.put(value, previous)
             } else {
                 MarkdownFileScanner.readRawContent(context, uri)?.let { raw ->
@@ -33,6 +33,7 @@ object TagIndexManager {
     }
 
     private fun record(raw: String, modified: Long, size: Long) = JSONObject()
+        .put("version", 2)
         .put("modified", modified).put("size", size).put("tags", JSONArray(NoteMetadata.tags(raw).toList()))
 
     private fun load(context: Context): JSONObject = runCatching {
@@ -75,6 +76,14 @@ object TagIndexManager {
             val tags = index.getJSONObject(key).getJSONArray("tags")
             (0 until tags.length()).asSequence().map { tags.getString(it) }
         }.distinct().sorted().toList()
+    }
+
+    fun indexedTags(context: Context): Map<String, Set<String>> {
+        val index = load(context)
+        return index.keys().asSequence().associateWith { uri ->
+            val tags = index.getJSONObject(uri).getJSONArray("tags")
+            (0 until tags.length()).map { tags.getString(it) }.toSet()
+        }
     }
 
     fun getFilteredCount(context: Context, tags: List<String>): Int = getFilesForTags(context, tags).size

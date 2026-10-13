@@ -1,28 +1,30 @@
 # MD Notes Widget
 
-Local Markdown notes and home-screen widgets for **Android 12+ · Kotlin · version 3.2**.
+Local Markdown notes and home-screen widgets for **Android 12+ · Kotlin · version 3.3.0**.
 
 [Русский](README.md) · [Download APK](https://github.com/SlamTGK/MDNotesWidget/releases/latest)
 
 ## Features
 
 - Compact and expanded widgets with random notes, pinning, creation and manual refresh.
-- **Per-widget settings:** folder, tags, theme, font, interval and quiet hours. Tap a widget title to configure it. The launcher screen sets defaults for **new** widgets.
+- **Shared app and widget settings:** folder, tags, theme, font, interval and quiet hours. Open the app or tap the widget title. Changes are saved only with **Apply**. Existing widget settings migrate automatically.
 - Markdown viewer with tables, code blocks, strikethrough, task lists and links. Local images appear in a separate preview strip.
 - Wiki links `[[note]]`, `[[path/note|label]]` and relative Markdown links. Ambiguous filenames are not opened arbitrarily.
 - **Autosaving editor**, local recovery drafts and external-change detection. Paging is disabled while editing. Empty notes can be saved; failed writes are reported.
 - Search across filenames and full content, favorites and the last 50 opened notes.
 - YAML and inline tags with AND/OR, exclusions, nested tags and favorites-only filtering. `work` includes `work/project`, not `workshop`.
+- Searchable folder and tag selection with checkboxes and note counts. Path exclusions cover subfolders; legacy name exclusions retain their behavior. Preview matching notes before applying.
+- Dot-prefixed folders are automatically excluded at every depth and omitted from folder pickers. Counts distinguish notes remaining after folder exclusions from matches against the other filters.
 - **App trash:** a local copy is persisted before the original file is deleted. Restore from the viewer menu into the selected root folder, without overwriting an existing file.
 - Daily notes named `YYYY-MM-DD`, a configurable creation subfolder and templates using `{{date}}` / `{{title}}`.
-- On this day: past years only; use YAML `date`/`created`, filename dates or modification dates.
-- Custom colors with `#AARRGGBB` transparency, preview and contrast estimation on black.
+- On this day: past years only, ignoring tags, favorites and user folder exclusions. Date priority: YAML `created`, then `date`, then YYYY-MM-DD in the filename. Modification time is never used; undated notes are skipped. Service folders are always excluded.
+- Custom colors with `#AARRGGBB` transparency and a preview of the selected theme and font.
 
 ## Setup
 
 1. Install the APK from Releases.
 2. Add a home-screen widget and select a folder using Android's system picker.
-3. Wait for scanning. Read-only folders can be viewed; editing requires write access.
+3. Wait for scanning, adjust your selection and tap **Apply**. Read-only folders can be viewed; editing requires write access.
 4. For Obsidian, select the **vault root** and optionally enter its name. Nested vault locations are supported.
 
 Use “Rescan files” after changing files externally. Periodic updates also scan the tree; tag indexing rereads changed files. Providers without reliable modification dates are reread.
@@ -66,6 +68,6 @@ CI runs tests, Android Lint and a debug build on pushes/PRs. Tags matching `v*` 
 - `AtomicJsonStore`: atomic local JSON persistence; list mutations are serialized.
 - Markwon rendering and Material 3 UI.
 
-Regression unit tests in `app/src/test/` cover metadata parsing, filters, settings isolation and atomic storage. Device release checks should include editor rotation/backgrounding, revoked SAF access, read-only providers, both widget types with separate folders, reboot, Doze and trash restoration.
+Regression unit tests in `app/src/test/` cover metadata, filters, shared-settings migration, settings drafts and atomic storage. Device release checks should include editor/settings rotation and backgrounding, revoked SAF access, read-only providers, both widget sizes, reboot, Doze and trash restoration.
 
 Made by [@slamtgk](https://t.me/slamtgk).

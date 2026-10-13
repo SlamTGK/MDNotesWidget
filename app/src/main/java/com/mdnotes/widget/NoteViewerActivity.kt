@@ -388,10 +388,14 @@ class NoteViewerActivity : AppCompatActivity() {
             try {
                 val notes = withContext(Dispatchers.IO) {
                     val today = LocalDate.now()
-                    val source = PreferencesManager.getOption(settings, "date_source", "auto")
-                    PreferencesManager.getCachedFileUris(settings).mapNotNull {
+                    val source = PreferencesManager.getOption(settings, "date_source", "auto").takeUnless { it == "modified" } ?: "auto"
+                    val folder = PreferencesManager.getFolderUri(settings) ?: return@withContext emptyList()
+                    // Anniversaries include user-excluded folders and ignore tag/favorite filters.
+                    val all = PreferencesManager.ScanContext(settings, folder, PreferencesManager.SYSTEM_BLACKLIST)
+                    val uris = MarkdownFileScanner.scanFolder(all, folder)
+                    uris.mapNotNull {
                         ensureActive()
-                        val note = MarkdownFileScanner.readNoteContent(this@NoteViewerActivity, Uri.parse(it)) ?: return@mapNotNull null
+                        val note = MarkdownFileScanner.readNoteContent(this@NoteViewerActivity, it) ?: return@mapNotNull null
                         val date = NoteMetadata.date(note.rawContent, note.fileName, source, note.lastModified)
                         note.takeIf { date != null && date.year < today.year && date.month == today.month && date.dayOfMonth == today.dayOfMonth }
                     }

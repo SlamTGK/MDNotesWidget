@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_apply">Применить</string>
+    <string name="settings_shared_help">Общие настройки приложения и виджета. Изменения вступят в силу после нажатия «Применить».</string>
+    <string name="settings_saved">Все изменения применены</string>
+    <string name="settings_unsaved">Есть неприменённые изменения</string>
+    <string name="settings_unsaved_help">Применить изменения перед выходом или оставить прежние настройки?</string>
+    <string name="settings_discard">Не сохранять</string>
+    <string name="settings_selection">Какие заметки показывать</string>
+    <string name="settings_folders_help">Исключённые папки не участвуют в подборке виджета. Выбор папки исключает и всё её содержимое, включая вложенные папки.</string>
+    <string name="settings_choose_folders">Выбрать исключённые папки</string>
+    <string name="settings_include_tags">Показывать с тегами</string>
+    <string name="settings_exclude_tags">Скрывать с тегами</string>
+    <string name="settings_choose_tags">Выбрать теги</string>
+    <string name="settings_tags_help">Теги из свойства tags и текста заметок. Если «Показывать с тегами» пусто, подходят любые теги. Исключения имеют приоритет.</string>
+    <string name="settings_any_tag">Любой из выбранных</string>
+    <string name="settings_all_tags">Все выбранные</string>
+    <string name="settings_show_matches">Посмотреть подходящие заметки</string>
+    <string name="settings_match_count">Подходят %1$d из %2$d заметок</string>
+    <string name="settings_folder_count">Исключено папками: %1$d. Всего до исключений: %2$d.</string>
+    <string name="settings_no_matches_help">Нет совпадений. Проверьте исключённые папки, скрытые теги, условие «Все выбранные» и «Только избранное».</string>
+    <string name="settings_appearance">Внешний вид</string>
+    <string name="settings_preview">Предпросмотр виджета</string>
+    <string name="settings_preview_body">Так будет выглядеть заметка с выбранной темой, цветами и размером текста. Текст переносится и занимает доступную высоту. Для прозрачной темы подложка предпросмотра серая.</string>
+    <string name="settings_schedule">Обновление</string>
+    <string name="settings_schedule_help">Автообновление выполняется примерно с выбранным интервалом. Тихие часы приостанавливают только автоматическое обновление; кнопка на виджете работает всегда.</string>
+    <string name="settings_vault">Название хранилища Obsidian</string>
+    <string name="settings_vault_help">Необязательно: по умолчанию используется имя выбранной папки. Папка с заметками должна быть корнем хранилища Obsidian.</string>
+    <string name="settings_creation">Создание заметок</string>
+    <string name="settings_destination">Папка для новых заметок</string>
+    <string name="settings_destination_help">Путь внутри папки с заметками, например Daily/Личное. Пусто — сохранять в корень. Несуществующая подпапка будет создана при сохранении заметки.</string>
+    <string name="settings_choose_destination">Выбрать существующую подпапку</string>
+    <string name="settings_root">Корневая папка</string>
+    <string name="settings_template">Шаблон новой заметки</string>
+    <string name="settings_template_help">Начальный текст заметки. {{date}} — сегодняшняя дата YYYY-MM-DD, {{title}} — название. Например: created: {{date}} в блоке свойств YAML.</string>
+    <string name="settings_template_preview">Пример по шаблону</string>
+    <string name="settings_empty_template">Шаблон пуст: новая заметка начнётся с пустого текста.</string>
+    <string name="settings_anniversary_help">Заметки за эту календарную дату в прошлые годы, из всей выбранной папки. Фильтры тегов, избранного и пользовательские исключения папок не применяются. Служебные папки пропускаются. Дата изменения файла не считается датой создания; заметки без определимой даты пропускаются.</string>
+    <string-array name="settings_creation_dates">
+        <item>Автоматически: created → date → имя файла</item>
+        <item>Свойства YAML: created, затем date</item>
+        <item>Дата YYYY-MM-DD в имени файла</item>
+    </string-array>
+    <string name="settings_scan_failed">Не удалось прочитать каталог. Проверьте доступ к папке и нажмите «Пересканировать файлы».</string>
+    <string name="settings_catalog_wait">Дождитесь каталога. Если сканирование не удалось, нажмите «Пересканировать файлы».</string>
+    <string name="settings_legacy_folder">%s — любое расположение</string>
+    <string name="settings_bad_destination">Укажите относительный путь без начального /, обратных слешей, . и ..</string>
+    <string name="settings_applying">Проверяем файлы и применяем настройки…</string>
+    <string name="settings_applied">Настройки применены</string>
+    <string name="settings_apply_failed">Не удалось применить настройки. Проверьте доступ к папке. Прежние настройки сохранены.</string>
+    <string name="settings_search">Поиск по названию или пути</string>
+    <string name="settings_selected_count">Выбрано: %d</string>
+    <string name="settings_select">Готово</string>
+    <string name="settings_clear">Снять выбор</string>
+    <string name="settings_bad_color">Введите цвет #RRGGBB или #AARRGGBB</string>
+</resources>

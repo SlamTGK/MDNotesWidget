@@ -5,6 +5,23 @@ import org.junit.Test
 import java.time.LocalDate
 
 class NoteMetadataTest {
+    @Test fun `folder selections distinguish paths while preserving legacy name rules`() {
+        assertTrue(FolderRules.excludes("Work/Archive/2020", listOf("/Work/Archive")))
+        assertFalse(FolderRules.excludes("Personal/Archive", listOf("/Work/Archive")))
+        assertFalse(FolderRules.excludes("Work/Archive2", listOf("/Work/Archive")))
+        assertTrue(FolderRules.excludes("Personal/Archive", listOf("archive")))
+        assertTrue(FolderRules.excludes("Work/.obsidian", PreferencesManager.SYSTEM_BLACKLIST))
+    }
+
+    @Test fun `tags allow YAML comments and blank lines in lists`() {
+        assertEquals(setOf("work", "personal", "body"), NoteMetadata.tags("---\ntags: [work, 'personal'] # comment\n---\n#body"))
+        assertEquals(setOf("work", "personal"), NoteMetadata.tags("---\ntags:\n  - work # comment\n\n  # comment\n  - personal\n---\n"))
+    }
+
+    @Test fun `anniversary prefers creation date and never falls back to modification time in auto mode`() {
+        assertEquals(LocalDate.of(2020, 1, 2), NoteMetadata.date("---\ndate: 2024-03-04\ncreated: 2020-01-02 # creation\n---\n", "2025-06-07.md", "auto", 12345))
+        assertNull(NoteMetadata.date("no properties", "note.md", "auto", 1700000000000))
+    }
     @Test fun `frontmatter only exists at document start`() {
         val raw = "Intro\n---\nKeep this text\n---\nEnd"
         assertEquals(raw, raw.replace(NoteMetadata.frontmatter, ""))

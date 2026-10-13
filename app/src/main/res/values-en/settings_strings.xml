@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_apply">Apply</string>
+    <string name="settings_shared_help">Shared app and widget settings. Changes take effect when you tap Apply.</string>
+    <string name="settings_saved">All changes applied</string>
+    <string name="settings_unsaved">Unapplied changes</string>
+    <string name="settings_unsaved_help">Apply your changes before leaving, or keep the previous settings?</string>
+    <string name="settings_discard">Discard</string>
+    <string name="settings_selection">Which notes to show</string>
+    <string name="settings_folders_help">Excluded folders do not appear in the widget selection. Excluding a folder also excludes all its subfolders and contents.</string>
+    <string name="settings_choose_folders">Choose excluded folders</string>
+    <string name="settings_include_tags">Include tags</string>
+    <string name="settings_exclude_tags">Exclude tags</string>
+    <string name="settings_choose_tags">Choose tags</string>
+    <string name="settings_tags_help">Tags from the tags property and note text. An empty include list allows any tags. Exclusions take priority.</string>
+    <string name="settings_any_tag">Any selected tag</string>
+    <string name="settings_all_tags">All selected tags</string>
+    <string name="settings_show_matches">View matching notes</string>
+    <string name="settings_match_count">%1$d of %2$d notes match</string>
+    <string name="settings_folder_count">Excluded by folders: %1$d. Total before exclusions: %2$d.</string>
+    <string name="settings_no_matches_help">No matches. Check excluded folders and tags, All selected tags, and Favorites only.</string>
+    <string name="settings_appearance">Appearance</string>
+    <string name="settings_preview">Widget preview</string>
+    <string name="settings_preview_body">This is how a note will look with your theme, colors and text size. Text wraps and fills the available height. Transparent themes use a gray preview backdrop.</string>
+    <string name="settings_schedule">Updates</string>
+    <string name="settings_schedule_help">Automatic updates run approximately at the selected interval. Quiet hours pause automatic updates only; the widget button always works.</string>
+    <string name="settings_vault">Obsidian vault name</string>
+    <string name="settings_vault_help">Optional: defaults to the selected folder name. Your notes folder must be the Obsidian vault root.</string>
+    <string name="settings_creation">New notes</string>
+    <string name="settings_destination">Folder for new notes</string>
+    <string name="settings_destination_help">A path inside your notes folder, e.g. Daily/Personal. Empty means the root. Missing subfolders are created when a note is saved.</string>
+    <string name="settings_choose_destination">Choose existing subfolder</string>
+    <string name="settings_root">Root folder</string>
+    <string name="settings_template">New note template</string>
+    <string name="settings_template_help">Initial note text. {{date}} is today in YYYY-MM-DD format, {{title}} is the title. Example: created: {{date}} inside YAML frontmatter.</string>
+    <string name="settings_template_preview">Template preview</string>
+    <string name="settings_empty_template">The template is empty: new notes start with no text.</string>
+    <string name="settings_anniversary_help">Notes from this calendar day in previous years across the entire selected folder. Tags, favorites and user folder exclusions do not apply. Service folders are skipped. File modification time is not treated as creation time; notes without a known date are skipped.</string>
+    <string-array name="settings_creation_dates">
+        <item>Automatic: created → date → filename</item>
+        <item>YAML properties: created, then date</item>
+        <item>YYYY-MM-DD in filename</item>
+    </string-array>
+    <string name="settings_scan_failed">Could not read the catalog. Check folder access and tap Rescan files.</string>
+    <string name="settings_catalog_wait">Wait for the catalog. If scanning failed, tap Rescan files.</string>
+    <string name="settings_legacy_folder">%s — any location</string>
+    <string name="settings_bad_destination">Use a relative path without leading /, backslashes, . or ..</string>
+    <string name="settings_applying">Checking files and applying settings…</string>
+    <string name="settings_applied">Settings applied</string>
+    <string name="settings_apply_failed">Could not apply settings. Check folder access. Previous settings are preserved.</string>
+    <string name="settings_search">Search by name or path</string>
+    <string name="settings_selected_count">Selected: %d</string>
+    <string name="settings_select">Done</string>
+    <string name="settings_clear">Clear selection</string>
+    <string name="settings_bad_color">Enter a color as #RRGGBB or #AARRGGBB</string>
+</resources>

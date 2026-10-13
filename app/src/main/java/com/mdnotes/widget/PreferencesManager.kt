@@ -15,7 +15,6 @@ object PreferencesManager {
     private const val KEY_INTERVAL_MINUTES = "interval_minutes"
     private const val KEY_INTERVAL_HOURS = "interval_hours" // Legacy
     private const val KEY_OPEN_WITH = "open_with"
-    private const val KEY_FILES_CACHE = "files_cache"
 
     // Open-with values
     const val OPEN_WITH_OBSIDIAN = "obsidian"
@@ -166,7 +165,7 @@ object PreferencesManager {
     // ── Folder Blacklist preference ───────────────────────────────────────────
 
     /** Folders that are always skipped regardless of user settings. */
-    private val SYSTEM_BLACKLIST = listOf(
+    val SYSTEM_BLACKLIST = listOf(
         ".stversions",   // Syncthing version history
         ".obsidian",     // Obsidian config
         ".trash",        // Obsidian trash
@@ -180,7 +179,8 @@ object PreferencesManager {
         val user = if (raw.isBlank()) emptyList()
                    else raw.split(";").map { it.trim() }.filter { it.isNotEmpty() }
         // Merge user list with built-in system blacklist (deduplicated)
-        return (SYSTEM_BLACKLIST + user).distinct()
+        val paths = org.json.JSONArray(getOption(context, "excluded_folder_paths", "[]"))
+        return (SYSTEM_BLACKLIST + user + (0 until paths.length()).map { "/" + paths.getString(it) }).distinct()
     }
 
     fun setFolderBlacklist(context: Context, folders: List<String>) {
@@ -252,8 +252,8 @@ object PreferencesManager {
 
     fun folderFile(context: Context, name: String): java.io.File {
         val key = java.security.MessageDigest.getInstance("SHA-256")
-            .digest(((getFolderUri(context)?.toString() ?: "none") + "\n" +
-                getFolderBlacklist(context).map { it.lowercase() }.distinct().sorted().joinToString("\n")).toByteArray())
+            .digest(("hidden-folders-v1\n" + (getFolderUri(context)?.toString() ?: "none") + "\n" +
+                getFolderBlacklist(context).map { if (it.startsWith('/')) it else it.lowercase() }.distinct().sorted().joinToString("\n")).toByteArray())
             .joinToString("") { "%02x".format(it) }
         return java.io.File(context.filesDir, "indexes/$key/$name")
     }
@@ -261,13 +261,8 @@ object PreferencesManager {
     fun getCachedFileUris(context: Context): List<String> {
         val file = getCacheFile(context)
         if (!file.exists() && !java.io.File(file.path + ".bak").exists()) {
-            val raw = prefs(context).getString(KEY_FILES_CACHE, "") ?: ""
-            if (raw.isNotEmpty()) {
-                val list = raw.split("\n").filter { it.isNotBlank() }
-                setCachedFileUris(context, list)
-                prefs(context).edit().remove(KEY_FILES_CACHE).apply()
-                return list
-            }
+            // Older caches may contain hidden folders or belong to different exclusion rules.
+            // Rebuild from the selected tree instead of importing an unfiltered URI list.
             return emptyList()
         }
         return try {
@@ -425,36 +420,54 @@ object PreferencesManager {
 
     private fun prefs(context: Context): android.content.SharedPreferences {
         if (context is ScanContext) return prefs(context.baseContext)
-        val id = when (context) {
-            is WidgetContext -> context.widgetId
-            is MainActivity -> context.settingsWidgetId
-            else -> android.appwidget.AppWidgetManager.INVALID_APPWIDGET_ID
-        }
-        val global = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        if (id == android.appwidget.AppWidgetManager.INVALID_APPWIDGET_ID) return global
-        val local = context.getSharedPreferences("widget_settings_$id", Context.MODE_PRIVATE)
-        if (!local.getBoolean("initialized", false)) {
-            synchronized(this) {
-                if (!local.getBoolean("initialized", false)) {
-                    val edit = local.edit()
-                    global.all.filterKeys { !it.matches(Regex("(?:note|pinned)_\\d+")) }.forEach { (key, value) ->
-                        when (value) {
-                            is String -> edit.putString(key, value)
-                            is Int -> edit.putInt(key, value)
-                            is Boolean -> edit.putBoolean(key, value)
-                            is Long -> edit.putLong(key, value)
-                        }
-                    }
-                    global.getString("note_$id", null)?.let { edit.putString("note_$id", it) }
-                    edit.putBoolean("pinned_$id", global.getBoolean("pinned_$id", false))
-                    edit.putBoolean("initialized", true).apply()
-                }
+        if (context is SettingsDraft) return context.preferences
+        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    }
+
+    internal val settingKeys = setOf("folder_uri", "interval_minutes", "interval_hours", "open_with",
+        "widget_theme", "custom_widget_bg_color", "custom_widget_text_color", "custom_widget_title_color",
+        "widget_font_size", "tag_filter", "tag_logic", "folder_blacklist", "excluded_folder_paths",
+        "quiet_hours_enabled", "quiet_hours_start", "quiet_hours_end", "excluded_tags", "favorites_only",
+        "obsidian_vault", "notes_subfolder", "note_template", "date_source")
+
+    internal fun settings(context: Context): Map<String, *> = prefs(context).all.filterKeys { it in settingKeys }
+
+    internal fun writeSettings(context: Context, values: Map<String, *>) {
+        val edit = prefs(context).edit()
+        settingKeys.forEach(edit::remove)
+        values.filterKeys { it in settingKeys }.forEach { (key, value) ->
+            when (value) {
+                is String -> edit.putString(key, value)
+                is Int -> edit.putInt(key, value)
+                is Long -> edit.putLong(key, value)
+                is Boolean -> edit.putBoolean(key, value)
             }
         }
-        return local
+        edit.apply()
+    }
+
+    /** Preserve the existing widget configuration once, then use one shared configuration. */
+    @Synchronized
+    fun migrateSharedSettings(context: Context, ids: List<Int>) {
+        val global = prefs(context)
+        if (global.getBoolean("shared_settings_v1", false)) return
+        val locals = ids.sorted().map { it to context.getSharedPreferences("widget_settings_$it", Context.MODE_PRIVATE) }
+        locals.firstOrNull { it.second.getBoolean("initialized", false) }?.let {
+            writeSettings(context, it.second.all)
+        }
+        val edit = global.edit()
+        locals.forEach { (id, local) ->
+            local.getString("note_$id", null)?.let { edit.putString("note_$id", it) }
+            if (local.contains("pinned_$id")) edit.putBoolean("pinned_$id", local.getBoolean("pinned_$id", false))
+        }
+        // Modification time is not creation time.
+        if (global.getString("date_source", "auto") == "modified") edit.putString("date_source", "auto")
+        edit.putBoolean("shared_settings_v1", true).apply()
     }
 
     fun deleteWidgetSettings(context: Context, id: Int) {
+        clearWidgetNote(context, id)
+        clearWidgetPinned(context, id)
         context.deleteSharedPreferences("widget_settings_$id")
     }
 

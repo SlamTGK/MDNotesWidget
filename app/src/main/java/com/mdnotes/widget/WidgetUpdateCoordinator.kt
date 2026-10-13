@@ -83,6 +83,30 @@ object WidgetUpdateCoordinator {
 
     fun refreshAll(context: Context) { ids(context).forEach { refresh(context, it, retain = true) } }
 
+    fun applySettings(context: Context, draft: SettingsDraft, filtersChanged: Boolean) {
+        val widgets = ids(context).sorted()
+        // Serialize the short commit with renders so an older click cannot restore an
+        // excluded note after the user applies new filters.
+        fun commit(index: Int) {
+            if (index < widgets.size) withWidgetLock(widgets[index]) { commit(index + 1) }
+            else {
+                draft.applySettings()
+                if (filtersChanged) widgets.forEach {
+                    PreferencesManager.clearWidgetPinned(context, it)
+                    PreferencesManager.clearWidgetNote(context, it)
+                }
+            }
+        }
+        commit(0)
+        val work = WorkManager.getInstance(context)
+        widgets.forEach { id ->
+            work.enqueueUniqueWork("widget-refresh-$id", ExistingWorkPolicy.REPLACE,
+                OneTimeWorkRequestBuilder<WidgetUpdateWorker>()
+                    .setInputData(workDataOf("id" to id, "retain" to !filtersChanged)).build())
+        }
+        schedule(context)
+    }
+
     fun remove(context: Context, id: Int) {
         WorkManager.getInstance(context).apply {
             cancelUniqueWork("widget-periodic-$id")

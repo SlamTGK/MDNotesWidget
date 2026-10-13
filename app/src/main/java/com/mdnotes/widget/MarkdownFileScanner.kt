@@ -26,7 +26,8 @@ object MarkdownFileScanner {
 
     fun scanFolder(context: Context, folderUri: Uri): List<Uri> {
         val result = linkedSetOf<Uri>()
-        val excluded = PreferencesManager.getFolderBlacklist(context).map { it.lowercase() }.toSet()
+        val excluded = PreferencesManager.getFolderBlacklist(context)
+        val folders = linkedSetOf<String>()
         val pending = java.util.ArrayDeque<Pair<String, String>>()
         val visited = mutableSetOf<String>()
         val paths = org.json.JSONObject()
@@ -47,7 +48,7 @@ object MarkdownFileScanner {
                         val name = it.getString(1) ?: continue
                         val path = if (parentPath.isEmpty()) name else "$parentPath/$name"
                         if (it.getString(2) == DocumentsContract.Document.MIME_TYPE_DIR) {
-                            if (name.lowercase() !in excluded) pending.add(id to path)
+                            if (!FolderRules.excludes(path, excluded)) { folders.add(path); pending.add(id to path) }
                         } else {
                             val uri = DocumentsContract.buildDocumentUriUsingTree(folderUri, id)
                             paths.put(path, uri.toString())
@@ -57,15 +58,17 @@ object MarkdownFileScanner {
                 }
             }
         } catch (e: Exception) {
+            if (e is SecurityException) throw e
             Log.w(TAG, "Fast SAF scan failed; using DocumentFile fallback", e)
             result.clear()
+            folders.clear()
             paths.keys().asSequence().toList().forEach(paths::remove)
             fun visit(directory: DocumentFile, prefix: String) {
                 directory.listFiles().forEach { file ->
                     val name = file.name ?: return@forEach
                     val path = if (prefix.isBlank()) name else "$prefix/$name"
                     when {
-                        file.isDirectory && name.lowercase() !in excluded -> visit(file, path)
+                        file.isDirectory && !FolderRules.excludes(path, excluded) -> { folders.add(path); visit(file, path) }
                         file.isFile -> {
                             paths.put(path, file.uri.toString())
                             if (name.endsWith(".md", true)) result.add(file.uri)
@@ -74,9 +77,11 @@ object MarkdownFileScanner {
                 }
             }
             val root = DocumentFile.fromTreeUri(context, folderUri) ?: throw e
+            if (!root.exists() || !root.canRead()) throw java.io.IOException("Cannot read notes folder", e)
             visit(root, "")
         }
         AtomicJsonStore.write(PreferencesManager.folderFile(context, "paths.json"), paths.toString())
+        AtomicJsonStore.write(PreferencesManager.folderFile(context, "folders.json"), org.json.JSONArray(folders.toList()).toString())
         return result.toList()
     }
 
